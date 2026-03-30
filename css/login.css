@@ -1,0 +1,182 @@
+/* =========================================
+   LOGIN PAGE STYLES
+========================================= */
+body {
+    margin: 0;
+    overflow-x: hidden;
+    background-color: var(--color-surface) !important;
+    color: var(--color-on-surface) !important;
+}
+
+.login-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--color-surface);
+}
+
+/* --- Phần Ảnh (Trái) --- */
+.login-media {
+    flex: 1;
+    position: relative;
+    display: none; 
+}
+
+@media (min-width: 992px) {
+    .login-media {
+        display: block;
+        width: 50%;
+    }
+}
+
+.login-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.login-media-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(13, 10, 8, 0.1) 0%, var(--color-surface) 100%);
+}
+
+.login-quote {
+    position: absolute;
+    bottom: var(--spacing-4xl);
+    left: var(--spacing-4xl);
+    max-width: 450px;
+    z-index: 2;
+}
+
+.login-quote .section-title {
+    color: var(--color-on-surface) !important;
+}
+
+.login-quote .section-content {
+    color: var(--color-on-surface-secondary) !important;
+}
+
+/* --- Phần Form (Phải) --- */
+.login-form-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    background-color: var(--color-surface);
+}
+
+.login-form-container {
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-header {
+    margin-bottom: var(--spacing-4xl);
+}
+
+.login-logo-link {
+    text-decoration: none;
+    display: block;
+    margin-bottom: var(--spacing-xl);
+}
+
+.login-logo-link .section-title {
+    font-size: var(--font-size-xl);
+    color: var(--color-secondary) !important;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.login-header .section-subtitle {
+    color: var(--color-on-surface) !important;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-2xl);
+}
+
+.login-header .section-content,
+.login-form .section-content {
+    color: var(--color-on-surface-secondary) !important;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.label-row .footer-link {
+    font-size: var(--font-size-xs);
+    color: var(--color-secondary) !important;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.label-row .footer-link:hover {
+    opacity: 0.8;
+}
+
+/* Input Styles */
+.login-input {
+    width: 100%;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid var(--color-outline) !important;
+    color: var(--color-on-surface) !important; /* Chữ khi gõ sáng rõ */
+    padding: var(--spacing-sm) 0;
+    font-family: var(--font-family-body);
+    font-size: var(--font-size-base);
+    transition: border-color 0.3s ease;
+}
+
+.login-input:focus {
+    outline: none !important;
+    border-bottom-color: var(--color-secondary) !important;
+}
+
+.login-input::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important; /* Mờ nhẹ để nổi bật chữ thật */
+}
+
+.login-submit {
+    margin-top: var(--spacing-lg);
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.login-footer {
+    margin-top: var(--spacing-4xl);
+    text-align: center;
+}
+
+.login-footer .section-content {
+    color: var(--color-on-surface-secondary) !important;
+}
+
+.join-link {
+    color: var(--color-secondary) !important;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.join-link:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}

@@ -1,0 +1,146 @@
+/* --- LAYOUT CHUNG --- */
+.about-page-container {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 140px var(--spacing-xl) 80px;
+}
+
+/* --- HERO SECTION --- */
+.about-hero {
+    text-align: center;
+    padding: var(--spacing-4xl) 0;
+    margin-bottom: var(--spacing-4xl);
+}
+
+.about-hero .hero-title {
+    margin-bottom: var(--spacing-md);
+    font-size: 4rem; /* Tạo điểm nhấn cực lớn */
+}
+
+/* --- SPLIT SECTION --- */
+.about-split-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-4xl);
+    align-items: center;
+    margin-bottom: var(--spacing-5xl);
+}
+
+.split-image img {
+    width: 100%;
+    border-radius: var(--border-radius-lg);
+    object-fit: cover;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.split-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* --- PHILOSOPHY GRID --- */
+.about-philosophy {
+    padding: var(--spacing-5xl) 0;
+    border-top: 1px solid var(--color-outline);
+}
+
+.philosophy-header {
+    text-align: center;
+    margin-bottom: var(--spacing-4xl);
+}
+
+.philosophy-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-3xl);
+}
+
+.philosophy-card {
+    background: var(--color-surface-elevated);
+    padding: var(--spacing-2xl);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+    transition: transform 0.3s ease;
+}
+
+.philosophy-card:hover {
+    transform: translateY(-10px);
+    border-color: var(--color-secondary);
+}
+
+.card-number {
+    display: block;
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-2xl);
+    color: var(--color-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.card-title {
+    font-family: var(--font-family-heading);
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-on-surface);
+}
+
+/* --- CTA SECTION --- */
+.about-cta {
+    text-align: center;
+    padding: var(--spacing-5xl) 0;
+    background: linear-gradient(to bottom, transparent, rgba(74, 55, 40, 0.1));
+}
+
+.cta-box {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 991px) {
+    .about-split-section, .philosophy-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .about-hero .hero-title {
+        font-size: 3rem;
+    }
+}
+
+/* --- ADMIN STYLES --- */
+.admin-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: var(--color-surface-elevated);
+    padding: 15px;
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.editable:hover {
+    outline: 1px dashed var(--color-secondary);
+    cursor: edit;
+}
+
+.editable:focus {
+    outline: 1px solid var(--color-primary);
+    background: rgba(255,255,255,0.05);
+}
+
+.split-image { position: relative; }
+
+.edit-img-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}

@@ -1,0 +1,136 @@
+.contact-page-container {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 140px var(--spacing-xl) 80px;
+}
+
+.contact-header {
+    text-align: center;
+    margin-bottom: var(--spacing-5xl);
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: var(--spacing-5xl);
+    margin-bottom: var(--spacing-5xl);
+}
+
+/* Info Section */
+.info-block {
+    margin-bottom: var(--spacing-3xl);
+}
+
+.info-label {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.contact-info p {
+    font-size: var(--font-size-lg);
+    line-height: 1.8;
+}
+
+.contact-socials {
+    display: flex;
+    gap: var(--spacing-xl);
+}
+
+/* Form Styling */
+.contact-form {
+    background: var(--color-surface-elevated);
+    padding: var(--spacing-3xl);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-xl);
+}
+
+.form-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-outline);
+    color: var(--color-on-surface);
+    padding: 12px 0;
+    font-family: var(--font-family-body);
+    transition: border-color 0.3s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-bottom-color: var(--color-secondary);
+}
+
+.select-input {
+    cursor: pointer;
+}
+
+/* Map Section */
+.contact-map-area {
+    height: 500px;
+    overflow: hidden;
+    border-radius: var(--border-radius-lg);
+}
+
+.map-placeholder {
+    position: relative;
+    height: 100%;
+}
+
+.map-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Admin Interaction Styles */
+.editable:hover {
+    outline: 1px dashed var(--color-secondary);
+}
+
+.admin-controls {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999;
+    background: var(--color-surface-elevated);
+    padding: 12px 20px;
+    border-radius: 50px;
+    border: 1px solid var(--color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+@media (max-width: 991px) {
+    .contact-grid { grid-template-columns: 1fr; }
+}
+
+/* Sửa lỗi hiển thị cho tất cả các ô chọn (Dropdown) */
+select {
+    background-color: var(--color-surface-elevated) !important; /* Nền tối của hệ thống */
+    color: var(--color-on-surface) !important; /* Chữ trắng xám */
+    border: 1px solid var(--color-outline);
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+}
+
+select option {
+    background-color: #1a1614; /* Ép nền tối (màu gần đen) cho các lựa chọn */
+    color: #f7f5f2; /* Ép chữ màu trắng sáng */
+    padding: 12px;
+}
+
+select option:hover, 
+select option:focus {
+    background-color: var(--color-secondary);
+    color: white;
+}
