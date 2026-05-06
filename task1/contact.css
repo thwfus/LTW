@@ -1,3 +1,4 @@
+/* Layout chung cho trang Liên hệ */
 .contact-page-container {
     max-width: var(--content-max-width);
     margin: 0 auto;
@@ -16,7 +17,7 @@
     margin-bottom: var(--spacing-5xl);
 }
 
-/* Info Section */
+/* Các khối thông tin */
 .info-block {
     margin-bottom: var(--spacing-3xl);
 }
@@ -39,7 +40,7 @@
     gap: var(--spacing-xl);
 }
 
-/* Form Styling */
+/* Thiết kế Form */
 .contact-form {
     background: var(--color-surface-elevated);
     padding: var(--spacing-3xl);
@@ -67,11 +68,7 @@
     border-bottom-color: var(--color-secondary);
 }
 
-.select-input {
-    cursor: pointer;
-}
-
-/* Map Section */
+/* Khu vực Bản đồ */
 .contact-map-area {
     height: 500px;
     overflow: hidden;
@@ -89,34 +86,15 @@
     object-fit: cover;
 }
 
-/* Admin Interaction Styles */
-.editable:hover {
-    outline: 1px dashed var(--color-secondary);
-}
-
-.admin-controls {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    z-index: 999;
-    background: var(--color-surface-elevated);
-    padding: 12px 20px;
-    border-radius: 50px;
-    border: 1px solid var(--color-secondary);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
+/* Hiển thị cho di động */
 @media (max-width: 991px) {
     .contact-grid { grid-template-columns: 1fr; }
 }
 
-/* Sửa lỗi hiển thị cho tất cả các ô chọn (Dropdown) */
+/* Tùy chỉnh Dropdown (Select) */
 select {
-    background-color: var(--color-surface-elevated) !important; /* Nền tối của hệ thống */
-    color: var(--color-on-surface) !important; /* Chữ trắng xám */
+    background-color: var(--color-surface-elevated) !important;
+    color: var(--color-on-surface) !important;
     border: 1px solid var(--color-outline);
     padding: 10px;
     border-radius: var(--border-radius-sm);
@@ -124,13 +102,7 @@ select {
 }
 
 select option {
-    background-color: #1a1614; /* Ép nền tối (màu gần đen) cho các lựa chọn */
-    color: #f7f5f2; /* Ép chữ màu trắng sáng */
+    background-color: #1a1614;
+    color: #f7f5f2;
     padding: 12px;
-}
-
-select option:hover, 
-select option:focus {
-    background-color: var(--color-secondary);
-    color: white;
 }

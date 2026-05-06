@@ -1,4 +1,15 @@
-<?php include '../php/header.php'; ?>
+<?php 
+// 1. Kết nối cơ sở dữ liệu và lấy dữ liệu 6 sản phẩm tồn kho cao nhất
+require_once '../task1/config_m1.php'; // Đảm bảo đường dẫn tới file kết nối đúng[cite: 4]
+
+try {
+    // Truy vấn lấy 6 sản phẩm có stock_quantity lớn nhất
+    $stmt = $pdo->query("SELECT * FROM Product ORDER BY stock_quantity DESC LIMIT 6");
+    $featuredProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $featuredProducts = []; // Nếu lỗi thì mảng rỗng để không crash trang
+}
+include '../php/header.php'; ?>
 <section class="hero-showcase">
           <div class="hero-showcase-background">
             <img
@@ -51,97 +62,34 @@
                 Signature pieces defining the Olivewood Atelier aesthetic.
               </p>
             </div>
+            
             <div class="featured-products-grid">
-              <div class="product-card">
-                <div class="product-card-media">
-                  <img
-                    src="https://images.pexels.com/photos/5440404/pexels-photo-5440404.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
-                    alt="The Olivewood Dining Chair"
-                  />
-                </div>
-                <div class="product-card-info">
-                  <h3 class="product-card-name">Olivewood Dining Chair</h3>
-                  <p class="product-card-price">$850.00</p>
-                  <a href="../task3/product-detail.php" class="product-card-btn btn btn-outline btn-sm">
-  View Detail
-</a>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-media">
-                  <img
-                    src="https://images.pexels.com/photos/3773579/pexels-photo-3773579.png?auto=compress&amp;cs=tinysrgb&amp;w=1500"
-                    alt="Minimalist Oak Table"
-                  />
-                </div>
-                <div class="product-card-info">
-                  <h3 class="product-card-name">Minimalist Oak Table</h3>
-                  <p class="product-card-price">$2,400.00</p>
-                  <a href="../task3/product-detail.php" class="product-card-btn btn btn-outline btn-sm">
-  View Detail
-</a>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-media">
-                  <img
-                    src="https://images.pexels.com/photos/6707628/pexels-photo-6707628.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
-                    alt="Velvet Lounge Armchair"
-                  />
-                </div>
-                <div class="product-card-info">
-                  <h3 class="product-card-name">Velvet Lounge Armchair</h3>
-                  <p class="product-card-price">$1,250.00</p>
-                  <a href="../task3/product-detail.php" class="product-card-btn btn btn-outline btn-sm">
-  View Detail
-</a>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-media">
-                  <img
-                    src="https://images.pexels.com/photos/14063638/pexels-photo-14063638.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
-                    alt="Artisan Sideboard"
-                  />
-                </div>
-                <div class="product-card-info">
-                  <h3 class="product-card-name">Artisan Sideboard</h3>
-                  <p class="product-card-price">$3,100.00</p>
-                  <a href="../task3/product-detail.php" class="product-card-btn btn btn-outline btn-sm">
-  View Detail
-</a>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-media">
-                  <img
-                    src="https://images.pexels.com/photos/4846455/pexels-photo-4846455.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
-                    alt="Marble Top Console"
-                  />
-                </div>
-                <div class="product-card-info">
-                  <h3 class="product-card-name">Marble Top Console</h3>
-                  <p class="product-card-price">$1,850.00</p>
-                  <a href="../task3/product-detail.php" class="product-card-btn btn btn-outline btn-sm">
-  View Detail
-</a>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-media">
-                  <img
-                    src="https://images.pexels.com/photos/6908500/pexels-photo-6908500.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
-                    alt="Curved Walnut Desk"
-                  />
-                </div>
-                <div class="product-card-info">
-                  <h3 class="product-card-name">Curved Walnut Desk</h3>
-                  <p class="product-card-price">$2,200.00</p>
-                  <a href="../task3/product-detail.php" class="product-card-btn btn btn-outline btn-sm">
-  View Detail
-</a>
-                </div>
-              </div>
+              <?php if (!empty($featuredProducts)): ?>
+                <?php foreach ($featuredProducts as $product): ?>
+                  <div class="product-card">
+                    <div class="product-card-media">
+                      <!-- Lấy đường dẫn ảnh từ cột url, nếu rỗng dùng ảnh mặc định[cite: 3] -->
+                      <img
+                        src="<?php echo htmlspecialchars($product['url'] ?: 'uploads/products/default.jpg'); ?>"
+                        alt="<?php echo htmlspecialchars($product['product_name']); ?>"
+                      />
+                    </div>
+                    <div class="product-card-info">
+                      <h3 class="product-card-name"><?php echo htmlspecialchars($product['product_name']); ?></h3>
+                      <!-- Định dạng giá tiền chuyên nghiệp[cite: 3] -->
+                      <p class="product-card-price">$<?php echo number_format($product['price'], 2); ?></p>
+                      <!-- Hiển thị số lượng tồn kho (Tùy chọn nếu bạn muốn khoe hàng nhiều) -->
+                      <p style="font-size: 11px; color: #888;">Stock: <?php echo $product['stock_quantity']; ?></p>
+                      
+                      <a href="../task3/product-detail.php?id=<?php echo $product['product_id']; ?>" class="product-card-btn btn btn-outline btn-sm">
+                        View Detail
+                      </a>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <p>Hiện chưa có sản phẩm nào nổi bật.</p>
+              <?php endif; ?>
             </div>
           </div>
         </section>
