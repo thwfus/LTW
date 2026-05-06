@@ -1,4 +1,10 @@
-<?php include '../php/header.php'; ?>
+<?php 
+  include '../php/header.php'; 
+  if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+  }
+  require_once '../dbacc.php';
+?>
 <link rel="stylesheet" href="../task2/qaa.css" />
 
 <main class="qaa-page">
@@ -34,71 +40,18 @@
     <div class="qaa-left">
       <div class="qaa-group">
         <h2 class="qaa-group-title">Frequently Asked Questions</h2>
+        <?php
+          $qst = $conn->query("SELECT * FROM qaa where status = 'pub'");
+          if ($qst->num_rows > 0) {
+            while ($row = $qst->fetch_assoc()) {
+              echo '<div class="qaa-item" data-category="' . $row['category'] . '">';
+              echo '<button class="qaa-question">' . $row['title'] . '<span>+</span></button>';
+              echo '<div class="qaa-answer"><p>' . $row['content'] . '</p></div>';
+              echo '</div>';
+            }
+          }
+        ?>
 
-        <div class="qaa-item" data-category="product">
-          <button class="qaa-question">
-            Does Olivewood offer custom interior design services?
-            <span>+</span>
-          </button>
-          <div class="qaa-answer">
-            <p>
-              Yes. We offer design support and customization for dimensions, materials,
-              colors, and surface finishes based on each customer's needs.
-            </p>
-          </div>
-        </div>
-
-        <div class="qaa-item" data-category="order">
-          <button class="qaa-question">
-            Can I place an order directly on the website?
-            <span>+</span>
-          </button>
-          <div class="qaa-answer">
-            <p>
-              Yes. You can add products to your cart, fill in your contact information,
-              confirm your order, and wait for our customer support team to contact you.
-            </p>
-          </div>
-        </div>
-
-        <div class="qaa-item" data-category="shipping">
-          <button class="qaa-question">
-            How long does delivery usually take?
-            <span>+</span>
-          </button>
-          <div class="qaa-answer">
-            <p>
-              Delivery usually takes 3 to 7 business days for in-stock items.
-              For custom-made products, the lead time may be longer depending on complexity.
-            </p>
-          </div>
-        </div>
-
-        <div class="qaa-item" data-category="warranty">
-          <button class="qaa-question">
-            What is Olivewood's warranty policy?
-            <span>+</span>
-          </button>
-          <div class="qaa-answer">
-            <p>
-              Our products are covered for technical defects caused by manufacturing issues.
-              The warranty period may vary depending on the product line.
-            </p>
-          </div>
-        </div>
-
-        <div class="qaa-item" data-category="product">
-          <button class="qaa-question">
-            Where can I view the products in person?
-            <span>+</span>
-          </button>
-          <div class="qaa-answer">
-            <p>
-              You can visit the Olivewood showroom to see the materials,
-              colors, and furniture collections in person.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -108,13 +61,22 @@
         <p>
           Send us your question and Olivewood will get back to you as soon as possible.
         </p>
-        <form class="qaa-form">
-          <input type="text" placeholder="Full name" required />
-          <input type="email" placeholder="Email" required />
-          <input type="text" placeholder="Question title" required />
-          <textarea rows="5" placeholder="Enter your question..." required></textarea>
-          <button type="submit" class="qaa-submit-btn">Submit Question</button>
+        <form class="qaa-form" method ="POST">
+          <input type="text" name="fullname" placeholder="Full name" required />
+          <input type="email" name="email" placeholder="Email" required />
+          <input type="text" name="title" placeholder="Question title" required />
+          <button type="submit" name="qsubmit" class="qaa-submit-btn">Submit Question</button>
         </form>
+
+        <?php
+          if (isset($_POST['qsubmit'])) {
+            $email = $_POST['email'];
+            $title = $_POST['title'];
+
+            $conn->query("INSERT INTO qaa (title, content, category, status) VALUES ('$title', '$email', 'product', 'draft')");
+            echo "<p>Your question has been submitted. We will get back to you soon.</p>";
+          }
+        ?>
       </div>
     </aside>
   </section>

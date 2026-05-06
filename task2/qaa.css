@@ -155,6 +155,10 @@
     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.qaa-item.open .qaa-answer {
+    max-height: 300px;
+}
+
 .qaa-answer p {
     padding-bottom: var(--spacing-xl);
     line-height: 1.8;

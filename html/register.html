@@ -31,7 +31,7 @@
                     <p class="section-content">Please fill in your details to register.</p>
                 </header>
 
-                <form class="login-form" action="../php/register_process.php" method="POST">
+                <form class="login-form" action="login_register.php" method="post">
                     <div class="input-group">
                         <label class="section-content">Full Name</label>
                         <input type="text" name="fullname" placeholder="John Doe" class="login-input" required />
@@ -52,7 +52,7 @@
                         <input type="password" name="confirm_password" placeholder="••••••••" class="login-input" required />
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg login-submit">
+                    <button type="submit" name="register" class="btn btn-primary btn-lg login-submit">
                         Register Now
                     </button>
                 </form>
