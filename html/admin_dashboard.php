@@ -2,29 +2,28 @@
   if (session_status() === PHP_SESSION_NONE) {
     session_start();
   }
-  require_once '../dbacc.php';
+
+  require_once '../task1/config_m1.php'; 
+  
   require_once 'includes/qa_logic.php';
-require_once '../task1/config_m1.php'; //
 
-// 1. Xử lý cập nhật Profile công ty
-if (isset($_POST['update_profile'])) {
-    $sql = "UPDATE Web_Info SET phone = ?, mail = ?, address = ? WHERE info_id = 1";
-    $pdo->prepare($sql)->execute([$_POST['phone'], $_POST['mail'], $_POST['address']]);
-}
+  // --- Logic xử lý Profile và Contact của Huy (Dùng $pdo) ---
+  if (isset($_POST['update_profile'])) {
+      $sql = "UPDATE Web_Info SET phone = ?, mail = ?, address = ? WHERE info_id = 1";
+      $pdo->prepare($sql)->execute([$_POST['phone'], $_POST['mail'], $_POST['address']]);
+  }
 
-// 2. Xử lý thao tác với tin nhắn liên hệ
-if (isset($_GET['action']) && isset($_GET['msg_id'])) {
-    $id = $_GET['msg_id'];
-    if ($_GET['action'] == 'mark_read') {
-        $pdo->prepare("UPDATE Contact_Messages SET status = 'Đã đọc' WHERE message_id = ?")->execute([$id]);
-    } elseif ($_GET['action'] == 'delete') {
-        $pdo->prepare("DELETE FROM Contact_Messages WHERE message_id = ?")->execute([$id]);
-    }
-}
+  if (isset($_GET['action']) && isset($_GET['msg_id'])) {
+      $id = $_GET['msg_id'];
+      if ($_GET['action'] == 'mark_read') {
+          $pdo->prepare("UPDATE Contact_Messages SET status = 'Đã đọc' WHERE message_id = ?")->execute([$id]);
+      } elseif ($_GET['action'] == 'delete') {
+          $pdo->prepare("DELETE FROM Contact_Messages WHERE message_id = ?")->execute([$id]);
+      }
+  }
 
-// Lấy dữ liệu để hiển thị
-$company = $pdo->query("SELECT * FROM Web_Info WHERE info_id = 1")->fetch();
-$messages = $pdo->query("SELECT * FROM Contact_Messages ORDER BY created_at DESC")->fetchAll();
+  $company = $pdo->query("SELECT * FROM Web_Info WHERE info_id = 1")->fetch();
+  $messages = $pdo->query("SELECT * FROM Contact_Messages ORDER BY created_at DESC")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -379,135 +378,6 @@ $messages = $pdo->query("SELECT * FROM Contact_Messages ORDER BY created_at DESC
         </div>
 
         <?php include 'includes/qa_view.php'; ?>
-
-        <div class="card pages-manager" id="pages-manager">
-          <div class="section-header">
-            <div>
-              <h2 class="panel-title">Quản lý thông tin trên các trang đã thiết kế</h2>
-              <div class="section-note">Cho phép thay đổi nội dung giới thiệu, hình ảnh, logo, số điện thoại, địa chỉ công ty và các nội dung khác trên trang.</div>
-            </div>
-          </div>
-          <div class="page-grid">
-            <div class="content-box">
-              <div class="page-card-title">
-                <h3>Trang chủ</h3>
-                <span class="badge live">Live</span>
-              </div>
-              <p>Chỉnh hero banner, text mở đầu, ảnh nền, CTA và các khối nội dung nổi bật.</p>
-              <div class="action-cell">
-                <button class="btn btn-light">Đổi ảnh</button>
-                <button class="btn btn-accent">Chỉnh sửa</button>
-              </div>
-            </div>
-            <div class="content-box">
-              <div class="page-card-title">
-                <h3>Trang liên hệ</h3>
-                <span class="badge live">Live</span>
-              </div>
-              <p>Cập nhật địa chỉ công ty, số điện thoại, email, bản đồ và hình ảnh showroom.</p>
-              <div class="action-cell">
-                <button class="btn btn-light">Đổi map</button>
-                <button class="btn btn-accent">Chỉnh sửa</button>
-              </div>
-            </div>
-            <div class="content-box">
-              <div class="page-card-title">
-                <h3>Header / Footer</h3>
-                <span class="badge live">Live</span>
-              </div>
-              <p>Thay đổi logo, menu điều hướng, thông tin footer và liên kết mạng xã hội.</p>
-              <div class="action-cell">
-                <button class="btn btn-light">Đổi logo</button>
-                <button class="btn btn-accent">Chỉnh sửa</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="page-form page-form-spacing">
-            <div class="field">
-              <label>Số điện thoại công ty</label>
-              <input type="text" value="+84 90 123 4567">
-            </div>
-            <div class="field">
-              <label>Email công ty</label>
-              <input type="text" value="atelier@olivewood.com">
-            </div>
-            <div class="field-full">
-              <label>Địa chỉ công ty</label>
-              <textarea>123 Dong Khoi Street, District 1, Ho Chi Minh City, Vietnam</textarea>
-            </div>
-            <div class="field">
-              <label>Logo website</label>
-              <input type="file">
-            </div>
-            <div class="field">
-              <label>Ảnh giới thiệu</label>
-              <input type="file">
-            </div>
-          </div>
-
-          <div class="bottom-actions">
-            <button class="btn btn-light">Lưu bản nháp</button>
-            <button class="btn btn-accent">Cập nhật nội dung trang</button>
-          </div>
-        </div>
-
-        <div class="card contacts" id="contacts">
-          <div class="section-header">
-            <div>
-              <h2 class="panel-title">Quản lý các liên hệ của khách hàng</h2>
-              <div class="section-note">Xem thông tin, đánh dấu đã đọc / chưa đọc / đã phản hồi, xoá liên hệ.</div>
-            </div>
-          </div>
-          <div class="table-toolbar">
-            <div class="toolbar-group">
-              <input type="text" placeholder="Tìm theo tên, email, số điện thoại...">
-              <select>
-                <option>Tất cả trạng thái</option>
-                <option>Chưa đọc</option>
-                <option>Đã đọc</option>
-                <option>Đã phản hồi</option>
-              </select>
-            </div>
-            <button class="btn btn-light">Tìm kiếm</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Khách hàng</th>
-                  <th>Thông tin liên hệ</th>
-                  <th>Nội dung</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Lê Minh Trang</td>
-                  <td>trang@gmail.com<br>0901234567</td>
-                  <td>Tôi muốn hỏi về bộ bàn ăn gỗ olive kích thước 6 ghế.</td>
-                  <td><span class="badge unread">Chưa đọc</span></td>
-                  <td><div class="action-cell"><button class="btn btn-light">Đã đọc</button><button class="btn btn-accent">Đã phản hồi</button><button class="btn btn-danger">Xoá</button></div></td>
-                </tr>
-                <tr>
-                  <td>Phan Quốc Huy</td>
-                  <td>huy@gmail.com<br>0912345678</td>
-                  <td>Tôi muốn đặt lịch đến showroom vào cuối tuần.</td>
-                  <td><span class="badge read">Đã đọc</span></td>
-                  <td><div class="action-cell"><button class="btn btn-accent">Đã phản hồi</button><button class="btn btn-danger">Xoá</button></div></td>
-                </tr>
-                <tr>
-                  <td>Nguyễn Bảo Linh</td>
-                  <td>linh@gmail.com<br>0987654321</td>
-                  <td>Tôi đã gửi đánh giá cho bài viết nhưng chưa thấy hiển thị.</td>
-                  <td><span class="badge replied">Đã phản hồi</span></td>
-                  <td><div class="action-cell"><button class="btn btn-light">Xem</button><button class="btn btn-danger">Xoá</button></div></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         <div class="card pages-manager" id="pages-manager">
             <div class="section-header">

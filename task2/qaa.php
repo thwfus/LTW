@@ -3,7 +3,7 @@
   if (session_status() === PHP_SESSION_NONE) {
     session_start();
   }
-  require_once '../dbacc.php';
+  require_once '../task1/config_m1.php';
 ?>
 <link rel="stylesheet" href="../task2/qaa.css" />
 

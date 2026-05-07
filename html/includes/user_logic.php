@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['field'])) {
         $userMessageType = 'error';
     } else {
         // $field đã qua whitelist nên an toàn để dùng trong tên cột
-        $stmt = $conn->prepare("UPDATE `user_profiles` SET `{$field}` = ? WHERE user_id = 1");
+        $stmt = $conn->prepare("UPDATE `profile` SET `{$field}` = ? WHERE user_id = 1");
         if ($stmt) {
             $stmt->bind_param('s', $value);
             if ($stmt->execute()) {
@@ -49,7 +49,7 @@ $userProfile = [
     'member_since' => 2026,
 ];
 
-$result = $conn->query("SELECT * FROM `user_profiles` WHERE user_id = 1 LIMIT 1");
+$result = $conn->query("SELECT * FROM `profile` WHERE user_id = 1 LIMIT 1");
 if ($result && $row = $result->fetch_assoc()) {
     $userProfile = $row;
     $result->free();

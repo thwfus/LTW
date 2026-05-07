@@ -1,5 +1,5 @@
 <?php
-require_once '../dbacc.php';
+require_once '../task1/config_m1.php';
 require_once 'includes/user_logic.php';
 ?>
 <?php include '../php/header.php'; ?>
