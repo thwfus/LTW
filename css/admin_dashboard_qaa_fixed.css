@@ -530,19 +530,71 @@ td small {
   font-size: 0.85rem;
 }
 
+/* ===================== START: QA CRUD STYLES ===================== */
+.qa-admin-box {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-2);
+}
+
+.qa-block-title {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+}
+
 .qa-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  padding: 16px 0;
 }
 
-.qa-add-form {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+.qa-actions-right {
+  justify-content: flex-end;
 }
 
-.qa-add-form.open {
-  max-height: 1000px;
+.qa-alert {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-weight: 700;
+  border: 1px solid transparent;
 }
+
+.qa-alert-success {
+  background: #e6f5ec;
+  color: #216541;
+  border-color: #cfe7d8;
+}
+
+.qa-alert-error {
+  background: #fbeaea;
+  color: #8f3535;
+  border-color: #efcfcf;
+}
+
+.qa-table-wrap {
+  margin-top: 18px;
+}
+
+.qa-table-textarea {
+  min-height: 110px;
+}
+
+.qa-action-cell {
+  min-width: 160px;
+}
+
+.qa-empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 22px 10px;
+}
+
+@media (max-width: 860px) {
+  .qa-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* ====================== END: QA CRUD STYLES ====================== */

@@ -29,10 +29,10 @@
                     <p class="section-content">Enter your details to access your atelier account.</p>
                 </header>
 
-                <form class="login-form">
+                <form class="login-form" action="login_register.php" method="post">
                     <div class="input-group">
                         <label class="section-content">Email Address</label>
-                        <input type="email" placeholder="mail@example.com" class="login-input" required />
+                        <input type="email" name="email" placeholder="mail@example.com" class="login-input" required />
                     </div>
                     
                     <div class="input-group">
@@ -40,10 +40,10 @@
                             <label class="section-content">Password</label>
                             <a href="#" class="footer-link">Forgot?</a>
                         </div>
-                        <input type="password" placeholder="••••••••" class="login-input" required />
+                        <input type="password" name="password" placeholder="••••••••" class="login-input" required />
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg login-submit">
+                    <button type="submit" name="login" class="btn btn-primary btn-lg login-submit">
                         Log In
                     </button>
                 </form>
