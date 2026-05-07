@@ -1,7 +1,7 @@
 :root {
   --spacing-lg: 1.5rem;
   --spacing-md: 1rem;
-  --spacing-sm: 0.75rem;
+  --spacing-sm: 1rem;
   --spacing-xl: 2rem;
   --spacing-xs: 0.5rem;
   --color-scrim: color-mix(in oklab, #ffffff 70%, transparent);

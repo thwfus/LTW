@@ -1,69 +1,170 @@
 <?php 
 include '../php/header.php'; 
-$isAdmin = false; 
+
+$conn = new mysqli("localhost", "root", "", "btl_ltw");
+
+if ($conn->connect_error) {
+    die("Database connection failed: " . $conn->connect_error);
+}
+
+$conn->set_charset("utf8mb4");
+
+$posts = [];
+
+$sql = "
+    SELECT 
+        rp.review_id,
+        rp.title,
+        rp.content,
+        rp.image,
+        rp.status,
+        rp.review_type,
+        rp.created_at,
+        rp.user_id,
+        rp.product_id,
+        u.user_name AS author_name,
+        p.product_name
+    FROM review_post rp
+    JOIN user u ON rp.user_id = u.user_id
+    LEFT JOIN product p ON rp.product_id = p.product_id
+    WHERE rp.status = 'approved'
+    ORDER BY rp.created_at DESC, rp.review_id DESC
+    LIMIT 4
+";
+
+$result = $conn->query($sql);
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $posts[] = $row;
+    }
+}
+
+function getReviewImageSrc($imagePath) {
+    if (empty($imagePath)) {
+        return "../uploads/reviews/default.jpg";
+    }
+
+    if (
+        strpos($imagePath, "http://") === 0 || 
+        strpos($imagePath, "https://") === 0
+    ) {
+        return $imagePath;
+    }
+
+    if (strpos($imagePath, "../") === 0) {
+        return $imagePath;
+    }
+
+    return "../" . $imagePath;
+}
+
+function formatReviewType($type) {
+    $labels = [
+        "product" => "Product Review",
+        "website" => "Website Review",
+        "service" => "Service Review",
+        "customer_experience" => "Customer Experience",
+        "delivery" => "Delivery Review",
+        "buying_guide" => "Buying Guide",
+        "general" => "General Review"
+    ];
+
+    return $labels[$type] ?? ucfirst(str_replace("_", " ", $type));
+}
+
+function makeExcerpt($content, $length = 140) {
+    $content = trim(strip_tags($content));
+
+    if (mb_strlen($content, "UTF-8") <= $length) {
+        return $content;
+    }
+
+    return mb_substr($content, 0, $length, "UTF-8") . "...";
+}
 ?>
+
 <link rel="stylesheet" href="../task4/news.css" />
 
 <main class="news-page-container">
     <header class="news-header animate__animated animate__fadeIn">
-        <h1 class="hero-title">Atelier Journal</h1>
-        <p class="section-content">Stories of craftsmanship and studio updates.</p>
-        
-        <?php if ($isAdmin): ?>
-            <button id="openModal" class="btn btn-primary btn-sm admin-create-btn">+ Create New Entry</button>
-        <?php endif; ?>
+        <h1 class="hero-title">Customer Stories</h1>
     </header>
 
-    <?php if ($isAdmin): ?>
-        <div id="postModal" class="admin-modal">
-            <div class="modal-content animate__animated animate__zoomIn">
-                <div class="modal-header">
-                    <h3 class="section-subtitle">New Journal Entry</h3>
-                    <span class="close-modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="info-label">Title</label>
-                        <input type="text" id="newPostTitle" class="form-input" placeholder="Enter title...">
-                    </div>
-                    <div class="form-group">
-                        <label class="info-label">Cover Image</label>
-                        <input type="file" id="newPostImg" class="form-input" accept="image/*">
-                        <div id="imagePreviewContainer" style="margin-top: 10px; display: none;">
-                            <img id="imagePreview" src="#" alt="Preview" style="width: 100%; border-radius: 8px;">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="info-label">Excerpt Summary</label>
-                        <textarea id="newPostExcerpt" class="form-input" rows="4" placeholder="Brief description..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="submitPost" class="btn btn-primary full-width">Publish to Journal</button>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-
     <section class="news-grid" id="newsGrid">
-        <article class="news-card">
-            <?php if ($isAdmin): ?>
-                <button class="delete-post-btn" onclick="deletePost(this)" title="Delete Post">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-            <?php endif; ?>
-            <div class="news-card-media">
-                <img src="https://images.pexels.com/photos/20337842/pexels-photo-20337842.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Journal Image">
-            </div>
-            <div class="news-card-content">
-                <span class="news-date">March 25, 2026</span>
-                <h2 class="news-title">The Art of Joinery</h2>
-                <p class="section-content">Exploring the traditional techniques that anchor our latest collection.</p>
-                <a href="#" class="btn btn-link">Read Full Story</a>
-            </div>
-        </article>
+        <?php if (!empty($posts)): ?>
+            <?php foreach ($posts as $post): ?>
+                <article class="news-card review-card">
+                    <a 
+                        href="../task4/news_detail.php?id=<?php echo (int)$post['review_id']; ?>" 
+                        class="news-card-link"
+                    >
+                        <div class="news-card-media">
+                            <img 
+                                src="<?php echo htmlspecialchars(getReviewImageSrc($post['image'])); ?>" 
+                                alt="<?php echo htmlspecialchars($post['title']); ?>"
+                                onerror="this.onerror=null; this.src='../uploads/reviews/default.jpg';"
+                            >
+                        </div>
+                    </a>
+
+                    <div class="news-card-content">
+                        <div class="post-meta-row">
+                            <span class="post-category">
+                                <?php echo htmlspecialchars(formatReviewType($post['review_type'])); ?>
+                            </span>
+
+                            <span class="news-date">
+                                <?php echo date("F d, Y", strtotime($post['created_at'])); ?>
+                            </span>
+                        </div>
+
+                        <h2 class="news-title">
+                            <a href="../task4/news_detail.php?id=<?php echo (int)$post['review_id']; ?>">
+                                <?php echo htmlspecialchars($post['title']); ?>
+                            </a>
+                        </h2>
+
+                        <p class="section-content">
+                            <?php echo htmlspecialchars(makeExcerpt($post['content'])); ?>
+                        </p>
+
+                        <div class="post-footer">
+                            <span class="post-author">
+                                By <?php echo htmlspecialchars($post['author_name']); ?>
+                            </span>
+
+                            <?php if (!empty($post['product_name'])): ?>
+                                <span class="post-product">
+                                    Product: <?php echo htmlspecialchars($post['product_name']); ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+
+                        <a 
+                            href="../task4/news_detail.php?id=<?php echo (int)$post['review_id']; ?>" 
+                            class="btn btn-link"
+                        >
+                            More
+                        </a>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <p class="section-content">
+                No approved articles are available yet.
+            </p>
+        <?php endif; ?>
+    </section>
+
+    <section class="review-summary">
+        <a href="../task4/news_all.php" class="view-all-posts-btn">
+            See All Articles
+        </a>
     </section>
 </main>
 
-<script src="../task2/news-admin.js"></script>
-<?php include '../php/footer.php'; ?>
+<?php 
+$conn->close();
+include '../php/footer.php'; 
+?>
