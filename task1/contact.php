@@ -1,40 +1,58 @@
 <?php 
+require_once '../task1/config_m1.php'; // Kết nối database[cite: 13]
+
+// --- PHẦN 1: XỬ LÝ KHI NGƯỜI DÙNG NHẤN GỬI (INSERT) ---
+$message = "";
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Lấy dữ liệu từ form
+    $name = $_POST['name'] ?? '';
+    $mail = $_POST['mail'] ?? '';
+    $question = $_POST['question'] ?? '';
+
+    // Kiểm tra dữ liệu đầu vào (Server-side validation)
+    if (!empty($name) && !empty($mail) && !empty($question)) {
+        // Sử dụng Prepared Statement để chống SQL Injection
+        $sql = "INSERT INTO Contact_Messages (name, mail, question) VALUES (?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        
+        if ($stmt->execute([$name, $mail, $question])) {
+            $message = "<p style='color: #4CAF50;'>Cảm ơn bạn! Tin nhắn đã được gửi thành công.</p>";
+        } else {
+            $message = "<p style='color: #f44336;'>Có lỗi xảy ra, vui lòng thử lại sau.</p>";
+        }
+    } else {
+        $message = "<p style='color: #ff9800;'>Vui lòng điền đầy đủ thông tin!</p>";
+    }
+}
+
+// --- PHẦN 2: LẤY THÔNG TIN CÔNG TY ĐỂ HIỂN THỊ (SELECT) ---
+$stmt = $pdo->query("SELECT * FROM Web_Info WHERE info_id = 1");
+$company = $stmt->fetch(PDO::FETCH_ASSOC);
+
 include '../php/header.php'; 
-$isAdmin = false; // Giả lập Admin đang đăng nhập để hiện các nút sửa
 ?>
 <link rel="stylesheet" href="../task1/contact.css" />
 
 <main class="contact-page-container">
-    <?php if ($isAdmin): ?>
-        <div class="admin-controls">
-            <button id="saveContactChanges" class="btn btn-primary btn-sm">Save Contact Info</button>
-            <span id="contactStatus"></span>
-        </div>
-    <?php endif; ?>
-
-    <header class="contact-header animate__animated animate__fadeIn">
-        <h1 class="hero-title <?= $isAdmin ? 'editable' : '' ?>" 
-            contenteditable="<?= $isAdmin ? 'true' : 'false' ?>" 
-            data-id="contact_title">Connect with the Atelier</h1>
+    <header class="contact-header">
+        <h1 class="hero-title">Connect with the Atelier</h1>
+        <?php echo $message; // Hiển thị thông báo gửi thành công/thất bại ?>
     </header>
 
     <div class="contact-grid">
+        <!-- HIỂN THỊ THÔNG TIN TỪ SQL -->
         <section class="contact-info">
             <div class="info-block">
                 <h3 class="info-label">The Studio</h3>
-                <p class="<?= $isAdmin ? 'editable' : '' ?>" 
-                   contenteditable="<?= $isAdmin ? 'true' : 'false' ?>" 
-                   data-id="contact_address">123 Dong Khoi Street, District 1<br>Ho Chi Minh City, Vietnam</p>
+                <!-- In địa chỉ từ bảng Web_Info[cite: 12] -->
+                <p><?php echo $company['address'] ?? '123 Dong Khoi Street, District 1, HCM'; ?></p>
             </div>
 
             <div class="info-block">
                 <h3 class="info-label">Inquiries</h3>
-                <p class="<?= $isAdmin ? 'editable' : '' ?>" 
-                   contenteditable="<?= $isAdmin ? 'true' : 'false' ?>" 
-                   data-id="contact_email">atelier@olivewood.com</p>
-                <p class="<?= $isAdmin ? 'editable' : '' ?>" 
-                   contenteditable="<?= $isAdmin ? 'true' : 'false' ?>" 
-                   data-id="contact_phone">+84 90 123 4567</p>
+                <!-- In Mail và SĐT[cite: 12, 15] -->
+                <p><?php echo htmlspecialchars($company['mail'] ?? 'atelier@olivewood.com'); ?></p>
+                <p><?php echo htmlspecialchars($company['phone'] ?? '+84 90 123 4567'); ?></p>
             </div>
 
             <div class="info-block">
@@ -46,39 +64,29 @@ $isAdmin = false; // Giả lập Admin đang đăng nhập để hiện các nú
             </div>
         </section>
 
+        <!-- FORM GỬI THÔNG TIN LÊN SQL -->
         <section class="contact-form-wrapper">
-            <form action="#" class="contact-form">
+            <form action="contact.php" method="POST" class="contact-form">
                 <div class="form-group">
-                    <input type="text" placeholder="Your Name" required class="form-input">
+                    <!-- Thuộc tính name phải khớp với biến $_POST trong PHP[cite: 1] -->
+                    <input type="text" name="name" placeholder="Your Name" required class="form-input">
                 </div>
                 <div class="form-group">
-                    <input type="email" placeholder="Email Address" required class="form-input">
+                    <input type="email" name="mail" placeholder="Email Address" required class="form-input">
                 </div>
                 <div class="form-group">
                     <select class="form-input select-input">
                         <option>Subject: Custom Commission</option>
                         <option>Subject: Product Inquiry</option>
-                        <option>Subject: Trade Program</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <textarea placeholder="Your Message" rows="5" class="form-input"></textarea>
+                    <textarea name="question" placeholder="Your Message" rows="5" required class="form-input"></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary full-width">Send Message</button>
             </form>
         </section>
     </div>
-
-    <section class="contact-map-area">
-        <div class="map-placeholder">
-            <img id="contactMapImg" src="https://images.pexels.com/photos/20337842/pexels-photo-20337842.jpeg?auto=compress&cs=tinysrgb&w=1500" alt="Atelier Location">
-            <?php if ($isAdmin): ?>
-                <input type="file" id="uploadMap" hidden accept="image/*">
-                <button class="edit-img-btn" onclick="document.getElementById('uploadMap').click()">Update Location Image</button>
-            <?php endif; ?>
-        </div>
-    </section>
 </main>
 
-<script src="../task2/contact-admin.js"></script>
 <?php include '../php/footer.php'; ?>

@@ -4,6 +4,27 @@
   }
   require_once '../dbacc.php';
   require_once 'includes/qa_logic.php';
+require_once '../task1/config_m1.php'; //
+
+// 1. Xử lý cập nhật Profile công ty
+if (isset($_POST['update_profile'])) {
+    $sql = "UPDATE Web_Info SET phone = ?, mail = ?, address = ? WHERE info_id = 1";
+    $pdo->prepare($sql)->execute([$_POST['phone'], $_POST['mail'], $_POST['address']]);
+}
+
+// 2. Xử lý thao tác với tin nhắn liên hệ
+if (isset($_GET['action']) && isset($_GET['msg_id'])) {
+    $id = $_GET['msg_id'];
+    if ($_GET['action'] == 'mark_read') {
+        $pdo->prepare("UPDATE Contact_Messages SET status = 'Đã đọc' WHERE message_id = ?")->execute([$id]);
+    } elseif ($_GET['action'] == 'delete') {
+        $pdo->prepare("DELETE FROM Contact_Messages WHERE message_id = ?")->execute([$id]);
+    }
+}
+
+// Lấy dữ liệu để hiển thị
+$company = $pdo->query("SELECT * FROM Web_Info WHERE info_id = 1")->fetch();
+$messages = $pdo->query("SELECT * FROM Contact_Messages ORDER BY created_at DESC")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -486,6 +507,105 @@
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div class="card pages-manager" id="pages-manager">
+            <div class="section-header">
+                <div>
+                    <h2 class="panel-title">Cấu hình thông tin liên hệ</h2>
+                    <div class="section-note">Cập nhật thông tin hiển thị tại trang Liên hệ và chân trang (Footer).</div>
+                </div>
+            </div>
+
+            <!-- Form gửi dữ liệu về logic PHP xử lý UPDATE -->
+            <form method="POST" action="#pages-manager">
+                <div class="page-form page-form-spacing">
+                    <div class="field">
+                        <label>Số điện thoại</label>
+                        <input type="text" name="phone" value="<?php echo htmlspecialchars($company['phone'] ?? ''); ?>" required>
+                    </div>
+                    
+                    <div class="field">
+                        <label>Email</label>
+                        <input type="email" name="mail" value="<?php echo htmlspecialchars($company['mail'] ?? ''); ?>" required>
+                    </div>
+                    
+                    <div class="field-full">
+                        <label>Địa chỉ công ty</label>
+                        <textarea name="address" rows="3" required><?php echo htmlspecialchars($company['address'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+
+                <div class="bottom-actions">
+                    <!-- Nút Lưu sẽ kích hoạt biến $_POST['update_profile'] trong PHP[cite: 1] -->
+                    <button type="submit" name="update_profile" class="btn btn-accent">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card contacts" id="contacts">
+            <div class="section-header">
+                <div>
+                    <h2 class="panel-title">Quản lý các liên hệ của khách hàng</h2>
+                    <div class="section-note">Xem nội dung tin nhắn, đánh dấu đã đọc hoặc xóa các liên hệ cũ.</div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th>Email</th>
+                            <th>Nội dung tin nhắn</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($messages)): ?>
+                            <?php foreach ($messages as $msg): ?>
+                            <tr>
+                                <!-- Hiển thị tên khách hàng -->
+                                <td><strong><?php echo htmlspecialchars($msg['name']); ?></strong></td>
+                                
+                                <!-- Hiển thị Email -->
+                                <td><?php echo htmlspecialchars($msg['mail']); ?></td>
+                                
+                                <!-- Hiển thị nội dung tin nhắn -->
+                                <td><?php echo htmlspecialchars($msg['question']); ?></td>
+                                
+                                <!-- Hiển thị trạng thái màu sắc theo badge -->
+                                <td>
+                                    <span class="badge <?php echo ($msg['status'] == 'Chưa đọc') ? 'unread' : 'read'; ?>">
+                                        <?php echo $msg['status']; ?>
+                                    </span>
+                                </td>
+                                
+                                <td>
+                                    <div class="action-cell">
+                                        <!-- Nút đánh dấu đã đọc - Gửi action qua URL[cite: 1] -->
+                                        <?php if ($msg['status'] == 'Chưa đọc'): ?>
+                                            <a href="?action=mark_read&msg_id=<?php echo $msg['message_id']; ?>#contacts" 
+                                              class="btn btn-light">Đánh dấu đã đọc</a>
+                                        <?php endif; ?>
+
+                                        <!-- Nút xóa liên hệ[cite: 1] -->
+                                        <a href="?action=delete&msg_id=<?php echo $msg['message_id']; ?>#contacts" 
+                                          class="btn btn-danger" 
+                                          onclick="return confirm('Bạn chắc chắn muốn xóa liên hệ này?')">Xoá</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">Hiện chưa có liên hệ nào từ khách hàng.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="card users" id="users">
