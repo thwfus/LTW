@@ -1,126 +1,345 @@
-<?php include '../php/header.php'; ?>
+<?php
+require_once __DIR__ . '/db.php';
+
+$customerId = current_customer_id($conn);
+$productId = (int)($_GET['id'] ?? 0);
+$notice = '';
+$noticeType = 'success';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_to_cart') {
+    $productId = (int)($_POST['product_id'] ?? $productId);
+    $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+
+    $ok = add_to_cart($conn, $customerId, $productId, $quantity, $notice);
+    $noticeType = $ok ? 'success' : 'error';
+}
+
+$stmt = $conn->prepare('
+    SELECT
+        p.product_id,
+        p.product_name,
+        p.price,
+        p.stock_quantity,
+        p.material,
+        p.color,
+        p.warranty_period,
+        p.url,
+        c.category_id,
+        c.category_name
+    FROM product p
+    JOIN category c ON p.category_id = c.category_id
+    WHERE p.product_id = ?
+    LIMIT 1
+');
+$stmt->bind_param('i', $productId);
+$stmt->execute();
+$product = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$relatedProducts = [];
+
+if ($product) {
+    $stmt = $conn->prepare('
+        SELECT product_id, product_name, price, url
+        FROM product
+        WHERE category_id = ? AND product_id <> ?
+        ORDER BY product_id ASC
+        LIMIT 3
+    ');
+    $stmt->bind_param('ii', $product['category_id'], $productId);
+    $stmt->execute();
+    $relatedProducts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+}
+
+$cart = get_cart_items($conn, $customerId);
+
+include_site_header($product ? $product['product_name'] : 'Product Detail');
+?>
+
 <link rel="stylesheet" href="../task3/product.css" />
 
 <main class="product-detail-container">
-    <section class="product-essentials">
-        <div class="product-gallery">
-            <div class="main-image-wrapper gallery-spacing">
-                <img id="mainImage" src="https://images.pexels.com/photos/3773579/pexels-photo-3773579.png?auto=compress&cs=tinysrgb&w=1500" alt="Minimalist Oak Table">
-            </div>
-            <div class="thumbnail-grid">
-                <img class="thumb active" src="https://images.pexels.com/photos/3773579/pexels-photo-3773579.png?auto=compress&cs=tinysrgb&w=300" onclick="changeImage(this.src, this)">
-                <img class="thumb" src="https://images.pexels.com/photos/447592/pexels-photo-447592.jpeg?auto=compress&cs=tinysrgb&w=300" onclick="changeImage(this.src, this)">
-                <img class="thumb" src="https://images.pexels.com/photos/20337842/pexels-photo-20337842.jpeg?auto=compress&cs=tinysrgb&w=300" onclick="changeImage(this.src, this)">
-            </div>
+    <?php if ($notice !== ''): ?>
+        <div class="task-alert task-alert-<?= h($noticeType) ?>">
+            <?= h($notice) ?>
         </div>
+    <?php endif; ?>
 
-        <div class="product-info-box">
-            <nav class="breadcrumb">Collections / Dining / Tables</nav>
-            <h1 class="product-title section-title">Minimalist Oak Table</h1>
-            <p class="product-price">$2,400.00</p>
-            
-            <div class="product-selection">
-                <div class="select-group">
-                    <label class="section-content">Wood Finish: <span>Natural Oak</span></label>
-                    <div class="swatch-picker">
-                        <button class="swatch active" style="background-color: #d2b48c;" title="Natural Oak"></button>
-                        <button class="swatch" style="background-color: #4a3728;" title="Smoked Oak"></button>
-                    </div>
+    <?php if (!$product): ?>
+        <section class="empty-state product-not-found">
+            <h1>Không tìm thấy sản phẩm</h1>
+            <p>Sản phẩm bạn đang xem không tồn tại hoặc đã bị xóa.</p>
+            <a class="product-card-btn" href="../task3/products.php">
+                Quay lại danh sách sản phẩm
+            </a>
+        </section>
+    <?php else: ?>
+        <section class="product-essentials">
+            <div class="product-gallery gallery-spacing">
+                <div class="main-image-wrapper">
+                    <img
+                        id="mainProductImage"
+                        src="<?= h(asset_path($product['url'])) ?>"
+                        alt="<?= h($product['product_name']) ?>"
+                    />
                 </div>
 
-                <div class="select-group">
-                    <label class="section-content">Quantity</label>
+                <div class="thumbnail-grid">
+                    <img
+                        class="thumb active"
+                        src="<?= h(asset_path($product['url'])) ?>"
+                        alt="Thumbnail"
+                        onclick="setMainImage(this)"
+                    />
+                    <img
+                        class="thumb"
+                        src="<?= h(asset_path($product['url'])) ?>"
+                        alt="Thumbnail"
+                        onclick="setMainImage(this)"
+                    />
+                    <img
+                        class="thumb"
+                        src="<?= h(asset_path($product['url'])) ?>"
+                        alt="Thumbnail"
+                        onclick="setMainImage(this)"
+                    />
+                </div>
+            </div>
+
+            <div class="product-info-panel">
+                <p class="breadcrumb">
+                    Collections / <?= h($product['category_name']) ?> / #<?= (int)$product['product_id'] ?>
+                </p>
+
+                <h1 class="product-title"><?= h($product['product_name']) ?></h1>
+                <p class="product-price"><?= money_vnd($product['price']) ?></p>
+
+                <div class="detail-status-row">
+                    <span class="stock-pill <?= (int)$product['stock_quantity'] > 0 ? 'in-stock' : 'out-stock' ?>">
+                        <?= (int)$product['stock_quantity'] > 0 ? 'Còn hàng' : 'Hết hàng' ?>
+                    </span>
+
+                    <span>Tồn kho: <?= (int)$product['stock_quantity'] ?></span>
+                </div>
+
+                <div class="quick-spec-list">
+                    <p><strong>Danh mục:</strong> <?= h($product['category_name']) ?></p>
+                    <p><strong>Vật liệu:</strong> <?= h($product['material'] ?: 'Chưa cập nhật') ?></p>
+                    <p><strong>Màu sắc:</strong> <?= h($product['color'] ?: 'Chưa cập nhật') ?></p>
+                    <p><strong>Bảo hành:</strong> <?= h($product['warranty_period'] ?: 'Chưa cập nhật') ?></p>
+                </div>
+
+                <form method="post" class="detail-cart-form">
+                    <input type="hidden" name="action" value="add_to_cart" />
+                    <input type="hidden" name="product_id" value="<?= (int)$product['product_id'] ?>" />
+
+                    <label class="qty-label">Quantity</label>
+
                     <div class="qty-selector">
-                        <button onclick="updateQty(-1)">−</button>
-                        <input type="number" id="quantity" value="1" min="1">
-                        <button onclick="updateQty(1)">+</button>
+                        <button type="button" onclick="changeQty(-1)">−</button>
+
+                        <input
+                            id="quantityInput"
+                            type="number"
+                            name="quantity"
+                            value="1"
+                            min="1"
+                            max="<?= max(1, (int)$product['stock_quantity']) ?>"
+                        />
+
+                        <button type="button" onclick="changeQty(1)">+</button>
                     </div>
+
+                    <button
+                        class="product-card-btn full-width"
+                        type="submit"
+                        <?= (int)$product['stock_quantity'] <= 0 ? 'disabled' : '' ?>
+                    >
+                        Add to Collection
+                    </button>
+
+                    <a class="product-card-btn secondary full-width" href="../task3/cart.php">
+                        Xem giỏ hàng
+                    </a>
+                </form>
+
+                <div class="service-notes">
+                    <p>✓ Handcrafted from sustainable materials</p>
+                    <p>✓ Bảo hành theo thông tin từng sản phẩm</p>
+                    <p>✓ Hỗ trợ kiểm tra giỏ hàng trước khi đặt</p>
                 </div>
             </div>
+        </section>
 
-            <div class="product-actions">
-                <button class="btn btn-primary btn-lg full-width">Add to Collection</button>
-                <button class="btn btn-outline btn-lg full-width">Custom Inquiry</button>
+        <section class="product-specs-section">
+            <div class="specs-tabs">
+                <button class="tab-link active" type="button" data-tab="story">
+                    Concept & Story
+                </button>
+
+                <button class="tab-link" type="button" data-tab="material">
+                    Dimensions & Material
+                </button>
+
+                <button class="tab-link" type="button" data-tab="cart">
+                    Cart Preview
+                </button>
             </div>
 
-            <div class="product-meta-highlights">
-                <p class="section-content">✓ Handcrafted from sustainable European Oak</p>
-                <p class="section-content">✓ Lifetime structural warranty</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="product-editorial-section">
-        <div class="specs-tabs">
-            <button class="tab-link active" onclick="openTab(event, 'Story')">Concept & Story</button>
-            <button class="tab-link" onclick="openTab(event, 'Specs')">Dimensions & Material</button>
-        </div>
-
-        <div class="tab-content-container">
-            <div id="Story" class="tab-pane active">
+            <div id="story" class="tab-pane active">
                 <div class="editorial-grid">
-                    <div class="editorial-text">
+                    <div>
                         <h2 class="editorial-heading">Pure Form</h2>
+
                         <p class="editorial-body">
-                            The Minimalist Oak Table is a celebration of restraint and material honesty. 
-                            Using traditional mortise and tenon joinery, each piece is assembled with surgical precision to ensure a lifetime of stability.
+                            <?= h($product['product_name']) ?> được thiết kế theo tinh thần tối giản,
+                            tập trung vào chất liệu, màu sắc và khả năng phối hợp trong không gian sống hiện đại.
                         </p>
                     </div>
-                    <div class="editorial-quote">
-                        <p>"Design is not just what it looks like; it's how the material breathes in your space."</p>
+
+                    <blockquote class="editorial-quote">
+                        “Design is not just what it looks like; it's how the material breathes in your space.”
+                    </blockquote>
+                </div>
+            </div>
+
+            <div id="material" class="tab-pane">
+                <div class="specs-table">
+                    <div class="specs-row">
+                        <span class="label">Product ID</span>
+                        <span class="value">#<?= (int)$product['product_id'] ?></span>
+                    </div>
+
+                    <div class="specs-row">
+                        <span class="label">Category</span>
+                        <span class="value"><?= h($product['category_name']) ?></span>
+                    </div>
+
+                    <div class="specs-row">
+                        <span class="label">Primary Material</span>
+                        <span class="value"><?= h($product['material'] ?: 'Chưa cập nhật') ?></span>
+                    </div>
+
+                    <div class="specs-row">
+                        <span class="label">Color</span>
+                        <span class="value"><?= h($product['color'] ?: 'Chưa cập nhật') ?></span>
+                    </div>
+
+                    <div class="specs-row">
+                        <span class="label">Warranty</span>
+                        <span class="value"><?= h($product['warranty_period'] ?: 'Chưa cập nhật') ?></span>
                     </div>
                 </div>
             </div>
 
-            <div id="Specs" class="tab-pane">
-                <div class="specs-table">
-                    <div class="specs-row">
-                        <span class="label">Overall Length</span>
-                        <span class="value">2200 mm / 86.6"</span>
-                    </div>
-                    <div class="specs-row">
-                        <span class="label">Overall Width</span>
-                        <span class="value">1000 mm / 39.4"</span>
-                    </div>
-                    <div class="specs-row">
-                        <span class="label">Primary Material</span>
-                        <span class="value">Solid European Oak</span>
-                    </div>
-                    <div class="specs-row">
-                        <span class="label">Protective Finish</span>
-                        <span class="value">Matte Natural Oil</span>
-                    </div>
+            <div id="cart" class="tab-pane">
+                <div class="cart-preview-box">
+                    <h2>Giỏ hàng của bạn</h2>
+
+                    <?php if (empty($cart['items'])): ?>
+                        <p>Giỏ hàng đang trống.</p>
+                    <?php else: ?>
+                        <?php foreach ($cart['items'] as $item): ?>
+                            <div class="cart-preview-row">
+                                <span>
+                                    <?= h($item['product_name']) ?> × <?= (int)$item['quantity'] ?>
+                                </span>
+
+                                <strong><?= money_vnd($item['line_total']) ?></strong>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <div class="cart-preview-total">
+                            <span>Tổng tạm tính</span>
+                            <strong><?= money_vnd($cart['total']) ?></strong>
+                        </div>
+                    <?php endif; ?>
+
+                    <a class="product-card-btn" href="../task3/cart.php">
+                        Đi đến trang giỏ hàng
+                    </a>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <?php if (!empty($relatedProducts)): ?>
+            <section class="related-products-section">
+                <h2>Sản phẩm cùng danh mục</h2>
+
+                <div class="related-grid">
+                    <?php foreach ($relatedProducts as $related): ?>
+                        <a
+                            class="related-card"
+                            href="../task3/product-detail.php?id=<?= (int)$related['product_id'] ?>"
+                        >
+                            <img
+                                src="<?= h(asset_path($related['url'])) ?>"
+                                alt="<?= h($related['product_name']) ?>"
+                            />
+
+                            <span><?= h($related['product_name']) ?></span>
+                            <strong><?= money_vnd($related['price']) ?></strong>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php endif; ?>
+    <?php endif; ?>
 </main>
 
 <script>
-    function changeImage(src, el) {
-        const mainImg = document.getElementById('mainImage');
-        mainImg.style.opacity = '0'; // Smooth transition
-        setTimeout(() => {
-            mainImg.src = src;
-            mainImg.style.opacity = '1';
-        }, 200);
-        
-        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
+function setMainImage(img) {
+    const main = document.getElementById('mainProductImage');
+
+    if (!main) {
+        return;
     }
 
-    function updateQty(val) {
-        let input = document.getElementById('quantity');
-        let current = parseInt(input.value);
-        if (current + val >= 1) input.value = current + val;
+    main.src = img.src;
+
+    document.querySelectorAll('.thumb').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    img.classList.add('active');
+}
+
+function changeQty(delta) {
+    const input = document.getElementById('quantityInput');
+
+    if (!input) {
+        return;
     }
 
-    function openTab(evt, tabName) {
-        document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        evt.currentTarget.classList.add('active');
-    }
+    const min = Number(input.min || 1);
+    const max = Number(input.max || 999);
+    const next = Math.min(max, Math.max(min, Number(input.value || 1) + delta));
+
+    input.value = next;
+}
+
+document.querySelectorAll('.tab-link').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-link').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        document.querySelectorAll('.tab-pane').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        button.classList.add('active');
+
+        const tab = document.getElementById(button.dataset.tab);
+
+        if (tab) {
+            tab.classList.add('active');
+        }
+    });
+});
 </script>
 
-<?php include '../php/footer.php'; ?>
+<?php
+include_site_footer();
+?>

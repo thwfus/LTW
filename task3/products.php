@@ -1,170 +1,309 @@
-<?php include '../php/header.php'; ?>
+<?php
+require_once __DIR__ . '/db.php';
+
+$customerId = current_customer_id($conn);
+$notice = '';
+$noticeType = 'success';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_to_cart') {
+    $productId = (int)($_POST['product_id'] ?? 0);
+    $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+
+    $ok = add_to_cart($conn, $customerId, $productId, $quantity, $notice);
+    $noticeType = $ok ? 'success' : 'error';
+}
+
+$keyword = trim($_GET['q'] ?? '');
+$categoryId = (int)($_GET['category_id'] ?? 0);
+$minPrice = trim($_GET['min_price'] ?? '');
+$maxPrice = trim($_GET['max_price'] ?? '');
+$sort = $_GET['sort'] ?? 'featured';
+
+$categories = [];
+$categoryResult = $conn->query('SELECT category_id, category_name FROM category ORDER BY category_name ASC');
+
+if ($categoryResult) {
+    $categories = $categoryResult->fetch_all(MYSQLI_ASSOC);
+}
+
+$where = [];
+$params = [];
+$types = '';
+
+if ($keyword !== '') {
+    $where[] = 'p.product_name LIKE ?';
+    $params[] = '%' . $keyword . '%';
+    $types .= 's';
+}
+
+if ($categoryId > 0) {
+    $where[] = 'p.category_id = ?';
+    $params[] = $categoryId;
+    $types .= 'i';
+}
+
+if ($minPrice !== '' && is_numeric($minPrice)) {
+    $where[] = 'p.price >= ?';
+    $params[] = (float)$minPrice;
+    $types .= 'd';
+}
+
+if ($maxPrice !== '' && is_numeric($maxPrice)) {
+    $where[] = 'p.price <= ?';
+    $params[] = (float)$maxPrice;
+    $types .= 'd';
+}
+
+$orderBy = 'p.product_id ASC';
+
+if ($sort === 'price_asc') {
+    $orderBy = 'p.price ASC';
+} elseif ($sort === 'price_desc') {
+    $orderBy = 'p.price DESC';
+} elseif ($sort === 'name_asc') {
+    $orderBy = 'p.product_name ASC';
+} elseif ($sort === 'stock_desc') {
+    $orderBy = 'p.stock_quantity DESC';
+}
+
+$sql = '
+    SELECT
+        p.product_id,
+        p.product_name,
+        p.price,
+        p.stock_quantity,
+        p.material,
+        p.color,
+        p.warranty_period,
+        p.url,
+        c.category_id,
+        c.category_name,
+        CASE
+            WHEN p.stock_quantity > 0 THEN "Còn hàng"
+            ELSE "Hết hàng"
+        END AS stock_status
+    FROM product p
+    JOIN category c ON p.category_id = c.category_id
+';
+
+if (!empty($where)) {
+    $sql .= ' WHERE ' . implode(' AND ', $where);
+}
+
+$sql .= ' ORDER BY ' . $orderBy;
+
+$stmt = $conn->prepare($sql);
+stmt_bind($stmt, $types, $params);
+$stmt->execute();
+$products = fetch_all_stmt($stmt);
+$stmt->close();
+
+$cart = get_cart_items($conn, $customerId);
+
+include_site_header('Shop All Products');
+?>
+
 <link rel="stylesheet" href="../task3/products.css" />
 
 <main class="products-page-container">
-    <header class="shop-header animate__animated animate__fadeIn">
+    <header class="shop-header">
+        <p class="eyebrow">Olivewood Collection</p>
         <h1 class="hero-title">Shop All Pieces</h1>
-        <p class="section-content">Discover our complete range of handcrafted artisanal furniture.</p>
+        <p class="shop-subtitle">
+            Tìm kiếm, lọc và thêm sản phẩm nội thất thủ công vào giỏ hàng.
+        </p>
     </header>
 
-    <div class="shop-layout">
-        <aside class="filter-sidebar">
-            <div class="filter-section">
-                <h3 class="filter-title section-subtitle">Categories</h3>
-                <ul class="filter-list">
-                    <li><label class="section-content"><input type="checkbox" checked> All Pieces</label></li>
-                    <li><label class="section-content"><input type="checkbox"> Chairs</label></li>
-                    <li><label class="section-content"><input type="checkbox"> Tables</label></li>
-                    <li><label class="section-content"><input type="checkbox"> Sofas</label></li>
-                    <li><label class="section-content"><input type="checkbox"> Shelves</label></li>
-                </ul>
-            </div>
+    <?php if ($notice !== ''): ?>
+        <div class="task-alert task-alert-<?= h($noticeType) ?>">
+            <?= h($notice) ?>
+        </div>
+    <?php endif; ?>
 
-            <div class="filter-section">
-                <h3 class="filter-title section-subtitle">Price Range</h3>
-                <div class="price-range-inputs">
-                    <input type="number" placeholder="Min $" class="price-input">
-                    <span class="divider">—</span>
-                    <input type="number" placeholder="Max $" class="price-input">
+    <section class="shop-layout">
+        <aside class="filter-sidebar">
+            <form method="get" class="filter-card">
+                <div class="filter-section">
+                    <h3 class="filter-title">Tìm kiếm</h3>
+                    <input
+                        class="price-input"
+                        type="text"
+                        name="q"
+                        value="<?= h($keyword) ?>"
+                        placeholder="Nhập tên sản phẩm..."
+                    />
                 </div>
-                <button class="btn btn-outline btn-sm full-width mt-md">Apply Filter</button>
+
+                <div class="filter-section">
+                    <h3 class="filter-title">Danh mục</h3>
+                    <select class="price-input" name="category_id">
+                        <option value="0">Tất cả danh mục</option>
+
+                        <?php foreach ($categories as $category): ?>
+                            <option
+                                value="<?= (int)$category['category_id'] ?>"
+                                <?= $categoryId === (int)$category['category_id'] ? 'selected' : '' ?>
+                            >
+                                <?= h($category['category_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="filter-section">
+                    <h3 class="filter-title">Khoảng giá</h3>
+
+                    <div class="price-range-inputs">
+                        <input
+                            class="price-input"
+                            type="number"
+                            name="min_price"
+                            value="<?= h($minPrice) ?>"
+                            placeholder="Từ"
+                            min="0"
+                        />
+
+                        <span>—</span>
+
+                        <input
+                            class="price-input"
+                            type="number"
+                            name="max_price"
+                            value="<?= h($maxPrice) ?>"
+                            placeholder="Đến"
+                            min="0"
+                        />
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3 class="filter-title">Sắp xếp</h3>
+
+                    <select class="price-input" name="sort">
+                        <option value="featured" <?= $sort === 'featured' ? 'selected' : '' ?>>
+                            Mặc định
+                        </option>
+                        <option value="price_asc" <?= $sort === 'price_asc' ? 'selected' : '' ?>>
+                            Giá tăng dần
+                        </option>
+                        <option value="price_desc" <?= $sort === 'price_desc' ? 'selected' : '' ?>>
+                            Giá giảm dần
+                        </option>
+                        <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>
+                            Tên A-Z
+                        </option>
+                        <option value="stock_desc" <?= $sort === 'stock_desc' ? 'selected' : '' ?>>
+                            Tồn kho nhiều nhất
+                        </option>
+                    </select>
+                </div>
+
+                <button class="product-card-btn full-width" type="submit">
+                    Apply Filter
+                </button>
+
+                <a class="clear-filter-link" href="../task3/products.php">
+                    Xóa bộ lọc
+                </a>
+            </form>
+
+            <div class="mini-cart-card">
+                <h3 class="filter-title">Giỏ hàng hiện tại</h3>
+                <p><?= count($cart['items']) ?> sản phẩm</p>
+                <strong><?= money_vnd($cart['total']) ?></strong>
+                <a class="clear-filter-link" href="../task3/cart.php">
+                    Xem giỏ hàng
+                </a>
             </div>
         </aside>
 
         <section class="products-content">
             <div class="products-toolbar">
-                <p class="section-content">Showing 12 products</p>
-                <select class="sort-select">
-                    <option>Sort by: Featured</option>
-                    <option>Price: Low to High</option>
-                    <option>Price: High to Low</option>
-                    <option>Newest Arrivals</option>
-                </select>
+                <p>Showing <strong><?= count($products) ?></strong> products</p>
+                <a class="admin-shortcut" href="../task3/admin-products.php">
+                    Admin: Quản lý sản phẩm
+                </a>
             </div>
 
-            <div class="featured-products-grid shop-grid">
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/5440404/pexels-photo-5440404.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Olivewood Dining Chair" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Olivewood Dining Chair</h3>
-                        <p class="product-card-price">$850.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
+            <?php if (empty($products)): ?>
+                <div class="empty-state">
+                    <h2>Không tìm thấy sản phẩm</h2>
+                    <p>Thử đổi từ khóa, danh mục hoặc khoảng giá.</p>
                 </div>
+            <?php else: ?>
+                <div class="featured-products-grid">
+                    <?php foreach ($products as $product): ?>
+                        <article class="product-card">
+                            <a
+                                href="../task3/product-detail.php?id=<?= (int)$product['product_id'] ?>"
+                                class="product-image-link"
+                            >
+                                <img
+                                    src="<?= h(asset_path($product['url'])) ?>"
+                                    alt="<?= h($product['product_name']) ?>"
+                                />
+                            </a>
 
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/3773579/pexels-photo-3773579.png?auto=compress&cs=tinysrgb&w=800" alt="Minimalist Oak Table" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Minimalist Oak Table</h3>
-                        <p class="product-card-price">$2,400.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
+                            <div class="product-card-body">
+                                <p class="product-category">
+                                    <?= h($product['category_name']) ?>
+                                </p>
+
+                                <h3><?= h($product['product_name']) ?></h3>
+
+                                <p class="product-meta">
+                                    <?= h($product['material'] ?: 'Chưa cập nhật vật liệu') ?>
+
+                                    <?php if (!empty($product['color'])): ?>
+                                        · <?= h($product['color']) ?>
+                                    <?php endif; ?>
+                                </p>
+
+                                <div class="price-stock-row">
+                                    <span class="product-price-small">
+                                        <?= money_vnd($product['price']) ?>
+                                    </span>
+
+                                    <span class="stock-pill <?= (int)$product['stock_quantity'] > 0 ? 'in-stock' : 'out-stock' ?>">
+                                        <?= h($product['stock_status']) ?>
+                                    </span>
+                                </div>
+
+                                <p class="stock-text">
+                                    Tồn kho: <?= (int)$product['stock_quantity'] ?>
+                                </p>
+
+                                <div class="product-card-actions">
+                                    <a
+                                        class="product-card-btn secondary"
+                                        href="../task3/product-detail.php?id=<?= (int)$product['product_id'] ?>"
+                                    >
+                                        View Detail
+                                    </a>
+
+                                    <form method="post">
+                                        <input type="hidden" name="action" value="add_to_cart" />
+                                        <input type="hidden" name="product_id" value="<?= (int)$product['product_id'] ?>" />
+                                        <input type="hidden" name="quantity" value="1" />
+
+                                        <button
+                                            class="product-card-btn"
+                                            type="submit"
+                                            <?= (int)$product['stock_quantity'] <= 0 ? 'disabled' : '' ?>
+                                        >
+                                            Add
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
-
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/6707628/pexels-photo-6707628.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Velvet Lounge Armchair" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Velvet Lounge Armchair</h3>
-                        <p class="product-card-price">$1,250.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/6707628/pexels-photo-6707628.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Velvet Lounge Armchair" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Velvet Lounge Armchair</h3>
-                        <p class="product-card-price">$1,250.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/6707628/pexels-photo-6707628.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Velvet Lounge Armchair" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Velvet Lounge Armchair</h3>
-                        <p class="product-card-price">$1,250.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/6707628/pexels-photo-6707628.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Velvet Lounge Armchair" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Velvet Lounge Armchair</h3>
-                        <p class="product-card-price">$1,250.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-card-media">
-                        <img src="https://images.pexels.com/photos/6707628/pexels-photo-6707628.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Velvet Lounge Armchair" />
-                    </div>
-                    <div class="product-card-info">
-                        <h3 class="product-card-name">Velvet Lounge Armchair</h3>
-                        <p class="product-card-price">$1,250.00</p>
-                        <div class="product-card-actions">
-                          <a href="product-detail.php" class="product-card-btn btn btn-outline btn-sm">View Detail</a>
-                          <button class="product-card-btn btn btn-primary btn-sm btn-with-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></g></svg>
-                            Add
-                          </button>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            <?php endif; ?>
         </section>
-    </div>
+    </section>
 </main>
 
-<?php include '../php/footer.php'; ?>
+<?php
+include_site_footer();
+?>
