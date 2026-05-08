@@ -3,6 +3,12 @@
     session_start();
   }
 
+  if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+      // Nếu chưa đăng nhập HOẶC không phải là admin -> Chuyển hướng về trang login
+      header("Location: ../html/404.html"); 
+      exit();
+  }
+
   require_once '../task1/config_m1.php'; 
   
   require_once 'includes/qa_logic.php';
@@ -61,7 +67,7 @@
         <div class="topbar-actions">
           <a class="btn btn-light" href="#pages-manager">Sửa nội dung trang</a>
           <a class="btn btn-accent" href="#products">Quản lý sản phẩm</a>
-          <button class="btn btn-dark">Đăng xuất</button>
+          <a href="logout.php" class="btn btn-dark" style="text-decoration: none;">Đăng xuất</a>
         </div>
       </div>
 

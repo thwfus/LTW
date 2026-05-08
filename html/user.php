@@ -1,4 +1,13 @@
 <?php
+session_start();
+
+// KIỂM TRA ĐĂNG NHẬP
+if (!isset($_SESSION['user_id'])) {
+    // Nếu chưa đăng nhập -> Chuyển hướng về trang login
+    header("Location: ../html/login.php");
+    exit();
+}
+
 require_once '../task1/config_m1.php';
 require_once 'includes/user_logic.php';
 ?>
@@ -114,7 +123,7 @@ require_once 'includes/user_logic.php';
 
                 <div class="profile-actions">
                     <button class="btn btn-outline btn-sm">Change Password</button>
-                    <button class="btn btn-primary btn-sm">Sign Out</button>
+                    <a href="logout.php" class="btn btn-primary btn-sm" style="text-decoration: none;">Sign Out</a>
                 </div>
             </div>
 

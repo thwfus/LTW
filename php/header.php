@@ -9,13 +9,13 @@ $isLoggedIn = isset($_SESSION['user_id']);
 $userRole = $_SESSION['role'] ?? 'guest';
 
 // Logic điều hướng User Icon: Khách -> login | Admin -> Dashboard | User -> Profile
-$userLink = "../html/login.html";
+$userLink = "../html/login.php";
 if ($isLoggedIn) {
-    $userLink = ($userRole === 'admin') ? "../html/admin_dashboard.html" : "../html/user.php";
+    $userLink = ($userRole === 'admin') ? "../html/admin_dashboard.php" : "../html/user.php";
 }
 
 // Logic điều hướng Cart Icon: Khách -> login | Đã đăng nhập -> Cart
-$cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.html";
+$cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.php";
 ?>
 
 <!DOCTYPE html>
