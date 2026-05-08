@@ -120,7 +120,7 @@ $cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.php";
                       </a>
                     </li>
                     <li>
-                      <a href="../task4/prices.php">
+                      <a href="../task1/prices.php">
                         <div class="navigation-link"><span>Prices</span></div>
                       </a>
                     </li>
