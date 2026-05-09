@@ -1,0 +1,31 @@
+DATABASE: testacc (MySQL / XAMPP)
+Kết nối: host=localhost, user=root, password=(trống)
+===================================================
+
+1. BẢNG Q&A (tên bảng tự động phát hiện qua detectQaTable)
+-----------------------------------------------------------
+Cột bắt buộc để được nhận diện là bảng Q&A:
+  q_id      INT           PRIMARY KEY AUTO_INCREMENT
+  title     VARCHAR/TEXT  Tiêu đề câu hỏi
+  content   TEXT          Nội dung câu trả lời
+  category  VARCHAR       Danh mục (product, order, shipping, warranty)
+  status    VARCHAR       Trạng thái (pub, draft)
+  role      VARCHAR       Vai trò người tạo (admin, ...)
+
+Dùng bởi: html/includes/qa_logic.php
+         html/includes/qa_view.php
+         html/admin_dashboard.php (qua include)
+
+
+2. BẢNG user_profiles
+-----------------------------------------------------------
+  user_id      INT(AUTO_INCREMENT)  PRIMARY KEY
+  name         VARCHAR(100)         Họ tên người dùng
+  email        VARCHAR(150)         Địa chỉ email
+  phone        VARCHAR(30)          Số điện thoại
+  address      TEXT                 Địa chỉ giao hàng
+  avatar_url   VARCHAR(500)         URL ảnh đại diện
+  member_since YEAR                 Năm trở thành thành viên
+
+Dùng bởi: html/includes/user_logic.php
+         html/user.php

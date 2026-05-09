@@ -1,0 +1,128 @@
+========================================================
+  DANH SÁCH CÁC DÒNG CODE ĐÃ CHỈNH SỬA
+========================================================
+
+--------------------------------------------------------
+1. FILE: dbacc.php  (dòng 8)
+--------------------------------------------------------
+TRƯỚC:
+    $database = "testacc";
+
+SAU:
+    $database = "btl_ltw";
+
+LÝ DO: File kết nối đang trỏ sai tên database. Database thực tế
+        tạo bởi file SQL là btl_ltw, không phải testacc.
+
+
+--------------------------------------------------------
+2. FILE: html/includes/user_logic.php  (dòng 9, 26, 43, 52)
+--------------------------------------------------------
+TRƯỚC (dòng 9 - không có):
+    [không có dòng này]
+
+SAU:
+    $currentUserId = $_SESSION['user_id'];
+
+---
+TRƯỚC (dòng 26):
+    $stmt = $conn->prepare("UPDATE `profile` SET `{$field}` = ? WHERE user_id = 1");
+    if ($stmt) {
+        $stmt->bind_param('s', $value);
+
+SAU:
+    $stmt = $conn->prepare("UPDATE `profile` SET `{$field}` = ? WHERE user_id = ?");
+    if ($stmt) {
+        $stmt->bind_param('si', $value, $currentUserId);
+
+---
+TRƯỚC (dòng 43):
+    $userProfile = [
+        'user_id'      => 1,
+
+SAU:
+    $userProfile = [
+        'user_id'      => $currentUserId,
+
+---
+TRƯỚC (dòng 52):
+    $result = $conn->query("SELECT * FROM `profile` WHERE user_id = 1 LIMIT 1");
+    if ($result && $row = $result->fetch_assoc()) {
+        $userProfile = $row;
+        $result->free();
+    }
+
+SAU:
+    $stmt = $conn->prepare("SELECT * FROM `profile` WHERE user_id = ? LIMIT 1");
+    $stmt->bind_param('i', $currentUserId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && $row = $result->fetch_assoc()) {
+        $userProfile = $row;
+    }
+    $stmt->close();
+
+LÝ DO: Code cũ hardcode cứng user_id = 1 khiến mọi tài khoản đều
+        đọc/ghi profile của user có id = 1. Sửa lại dùng session
+        của người đang đăng nhập.
+
+
+--------------------------------------------------------
+3. FILE: html/login_register.php  (sau dòng insert User)
+--------------------------------------------------------
+TRƯỚC:
+    $insert = $pdo->prepare("INSERT INTO User (user_name, email, password, role) VALUES (?, ?, ?, 'member')");
+    if ($insert->execute([$name, $email, $hashed_password])) {
+        // Đăng ký thành công, sang trang login kèm thông báo status
+        header("Location: login.php?status=registered");
+        exit();
+    }
+
+SAU:
+    $insert = $pdo->prepare("INSERT INTO User (user_name, email, password, role) VALUES (?, ?, ?, 'member')");
+    if ($insert->execute([$name, $email, $hashed_password])) {
+        // 5. Tạo profile cho user mới với tên và email, còn lại để trống
+        $newUserId = $pdo->lastInsertId();
+        $year = (int)date('Y');
+        $profileInsert = $pdo->prepare("INSERT INTO profile (user_id, name, email, phone, address, avatar_url, member_since) VALUES (?, ?, ?, '', '', '', ?)");
+        $profileInsert->execute([$newUserId, $name, $email, $year]);
+
+        header("Location: login.php?status=registered");
+        exit();
+    }
+
+LÝ DO: Khi đăng ký mới không tự tạo bản ghi profile, dẫn đến
+        trang user.php hiển thị trống hoặc lấy nhầm profile người khác.
+        Thêm INSERT vào bảng profile ngay sau khi tạo User thành công.
+
+
+--------------------------------------------------------
+4. FILE: fix_passwords.php  (file mới tạo - dùng 1 lần rồi xóa)
+--------------------------------------------------------
+NỘI DUNG:
+    <?php
+    require_once 'task1/config_m1.php';
+
+    $stmt = $pdo->query("SELECT user_id, password FROM user");
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $updated = 0;
+    foreach ($users as $user) {
+        if (strpos($user['password'], '$2y$') !== 0) {
+            $hashed = password_hash($user['password'], PASSWORD_DEFAULT);
+            $upd = $pdo->prepare("UPDATE user SET password = ? WHERE user_id = ?");
+            $upd->execute([$hashed, $user['user_id']]);
+            $updated++;
+        }
+    }
+
+    echo "Đã hash $updated tài khoản. <a href='html/login.php'>Đăng nhập ngay</a>";
+    ?>
+
+LÝ DO: Dữ liệu mẫu lưu mật khẩu dạng plaintext (123456) nhưng
+        login_register.php dùng password_verify() chỉ hoạt động
+        với bcrypt hash. Script này hash lại toàn bộ mật khẩu cũ.
+        Truy cập http://localhost/LTW-duchuy/fix_passwords.php để chạy,
+        sau đó XÓA file này đi.
+
+========================================================

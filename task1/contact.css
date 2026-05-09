@@ -1,0 +1,108 @@
+/* Layout chung cho trang Liên hệ */
+.contact-page-container {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 140px var(--spacing-xl) 80px;
+}
+
+.contact-header {
+    text-align: center;
+    margin-bottom: var(--spacing-5xl);
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: var(--spacing-5xl);
+    margin-bottom: var(--spacing-5xl);
+}
+
+/* Các khối thông tin */
+.info-block {
+    margin-bottom: var(--spacing-3xl);
+}
+
+.info-label {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.contact-info p {
+    font-size: var(--font-size-lg);
+    line-height: 1.8;
+}
+
+.contact-socials {
+    display: flex;
+    gap: var(--spacing-xl);
+}
+
+/* Thiết kế Form */
+.contact-form {
+    background: var(--color-surface-elevated);
+    padding: var(--spacing-3xl);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-xl);
+}
+
+.form-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-outline);
+    color: var(--color-on-surface);
+    padding: 12px 0;
+    font-family: var(--font-family-body);
+    transition: border-color 0.3s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-bottom-color: var(--color-secondary);
+}
+
+/* Khu vực Bản đồ */
+.contact-map-area {
+    height: 500px;
+    overflow: hidden;
+    border-radius: var(--border-radius-lg);
+}
+
+.map-placeholder {
+    position: relative;
+    height: 100%;
+}
+
+.map-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Hiển thị cho di động */
+@media (max-width: 991px) {
+    .contact-grid { grid-template-columns: 1fr; }
+}
+
+/* Tùy chỉnh Dropdown (Select) */
+select {
+    background-color: var(--color-surface-elevated) !important;
+    color: var(--color-on-surface) !important;
+    border: 1px solid var(--color-outline);
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+}
+
+select option {
+    background-color: #1a1614;
+    color: #f7f5f2;
+    padding: 12px;
+}
