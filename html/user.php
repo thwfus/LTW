@@ -31,7 +31,11 @@ require_once 'includes/user_logic.php';
         <section class="profile-grid">
             <div class="profile-sidebar">
                 <div class="avatar-container">
-                    <img src="<?= h($userProfile['avatar_url']) ?>" alt="User Avatar" class="profile-avatar">
+                    <img 
+                        src="<?= h($userProfile['avatar_url'] ? $userProfile['avatar_url'] : '../uploads/avatar/default.jpg') ?>" 
+                        alt="User Avatar" 
+                        class="profile-avatar"
+                    >
                     <button class="edit-avatar-btn" title="Change Image">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                     </button>
@@ -121,9 +125,31 @@ require_once 'includes/user_logic.php';
 
                 </div>
 
-                <div class="profile-actions">
-                    <button class="btn btn-outline btn-sm">Change Password</button>
+                <div class="profile-actions" style="display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                    <button class="btn btn-outline btn-sm" onclick="togglePasswordForm()">Change Password</button>
                     <a href="logout.php" class="btn btn-primary btn-sm" style="text-decoration: none;">Sign Out</a>
+                    
+                    <div id="password-form-container" style="display: none; margin-top: 20px; border-top: 1px solid var(--color-outline); padding-top: 20px; width: 100%;">
+                        <form method="POST" action="">
+                            <input type="hidden" name="action" value="change_password">
+                            <div class="info-item">
+                                <div class="info-label">Current Password</div>
+                                <input type="password" name="current_password" class="inline-edit-input" required>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">New Password</div>
+                                <input type="password" name="new_password" class="inline-edit-input" required>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Confirm New Password</div>
+                                <input type="password" name="confirm_password" class="inline-edit-input" required>
+                            </div>
+                            <div class="inline-edit-actions" style="margin-top: 15px;">
+                                <button type="submit" class="btn btn-primary btn-sm">Update Password</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="togglePasswordForm()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -214,6 +240,15 @@ require_once 'includes/user_logic.php';
             form.querySelector('input[name="value"], textarea[name="value"]')?.focus();
         }
     }
+
+    function togglePasswordForm() {
+    const container = document.getElementById('password-form-container');
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
 </script>
 
 <script src="../task1/user.js"></script>

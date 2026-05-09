@@ -1,16 +1,25 @@
 <?php
 require_once __DIR__ . '/db.php';
 
-$customerId = current_customer_id($conn);
+// 1. KIỂM TRA ĐĂNG NHẬP
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../html/login.php");
+    exit();
+}
+
+// 2. LẤY ID NGƯỜI DÙNG TỪ SESSION
+$customerId = (int)$_SESSION['user_id'];
 $notice = '';
 $noticeType = 'success';
 
+// 3. XỬ LÝ CÁC HÀNH ĐỘNG TRONG GIỎ HÀNG
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $cartId = get_active_cart_id($conn, $customerId, false);
+    // Tìm mã giỏ hàng 'active' của khách hàng này
+    $cartId = get_active_cart_id($customerId, false);
 
     if (!$cartId) {
-        $notice = 'Giỏ hàng đang trống.';
+        $notice = 'Giỏ hàng đang trống hoặc không tồn tại.';
         $noticeType = 'error';
     } elseif ($action === 'update_quantity') {
         $productId = (int)($_POST['product_id'] ?? 0);
@@ -20,12 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('iii', $quantity, $cartId, $productId);
 
         if ($stmt->execute()) {
-            $notice = 'Đã cập nhật số lượng.';
+            $notice = 'Đã cập nhật số lượng thành công.';
         } else {
-            $notice = $stmt->error ?: 'Không thể cập nhật số lượng.';
+            $notice = 'Không thể cập nhật số lượng.';
             $noticeType = 'error';
         }
-
         $stmt->close();
     } elseif ($action === 'remove_item') {
         $productId = (int)($_POST['product_id'] ?? 0);
@@ -34,52 +42,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('ii', $cartId, $productId);
 
         if ($stmt->execute()) {
-            $notice = 'Đã xóa sản phẩm khỏi giỏ hàng.';
+            $notice = 'Item successfully removed from cart.';
         } else {
-            $notice = $stmt->error ?: 'Không thể xóa sản phẩm.';
+            $notice = 'Error removing item from cart.';
             $noticeType = 'error';
         }
-
         $stmt->close();
     } elseif ($action === 'clear_cart') {
         $stmt = $conn->prepare('DELETE FROM cartitem WHERE cart_id = ?');
         $stmt->bind_param('i', $cartId);
 
         if ($stmt->execute()) {
-            $notice = 'Đã làm trống giỏ hàng.';
+            $notice = 'Đã làm trống toàn bộ giỏ hàng.';
         } else {
-            $notice = $stmt->error ?: 'Không thể làm trống giỏ hàng.';
+            $notice = 'Lỗi khi làm trống giỏ hàng.';
             $noticeType = 'error';
         }
-
         $stmt->close();
     }
 }
 
-$cart = get_cart_items($conn, $customerId);
+// 4. LẤY DỮ LIỆU GIỎ HÀNG ĐỂ HIỂN THỊ
+// Hàm get_cart_items sẽ tự động JOIN bảng cartitem và product để lấy tên, giá, ảnh...
+$cart = get_cart_items($customerId);
 
-$user = null;
+// Lấy thông tin khách hàng để hiển thị tiêu đề
+$user = db_one('SELECT user_name, email FROM User WHERE user_id = ? LIMIT 1', 'i', array($customerId));
 
-$stmt = $conn->prepare('SELECT user_id, user_name, email, phone FROM user WHERE user_id = ? LIMIT 1');
-$stmt->bind_param('i', $customerId);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-include_site_header('Cart');
+include_site_header('Your Collection - Cart');
 ?>
 
 <link rel="stylesheet" href="../task3/product.css" />
 
 <main class="product-detail-container">
     <header class="cart-header-page">
-        <p class="breadcrumb">Task 3 / Cart</p>
-        <h1 class="product-title">Giỏ hàng</h1>
+        <p class="breadcrumb">Atelier / Shopping Cart</p>
+        <h1 class="product-title">Your Cart</h1>
 
         <?php if ($user): ?>
             <p>
-                Khách hàng:
-                <strong><?= h($user['user_name']) ?></strong>
+                Customer: <strong><?= h($user['user_name']) ?></strong>
                 · <?= h($user['email']) ?>
             </p>
         <?php endif; ?>
@@ -93,10 +95,10 @@ include_site_header('Cart');
 
     <?php if (empty($cart['items'])): ?>
         <section class="empty-state product-not-found">
-            <h2>Giỏ hàng đang trống</h2>
-            <p>Hãy quay lại trang sản phẩm để chọn thêm món nội thất bạn yêu thích.</p>
+            <h2>The cart is empty</h2>
+            <p>View our best collections.</p>
             <a class="product-card-btn" href="../task3/products.php">
-                Tiếp tục mua sắm
+                Ours Collections
             </a>
         </section>
     <?php else: ?>
@@ -112,8 +114,7 @@ include_site_header('Cart');
                         <div class="cart-item-info">
                             <p class="product-category"><?= h($item['category_name']) ?></p>
                             <h3><?= h($item['product_name']) ?></h3>
-                            <p>Đơn giá: <?= money_vnd($item['unit_price']) ?></p>
-                            <p>Tồn kho hiện tại: <?= (int)$item['stock_quantity'] ?></p>
+                            <p>Price: <?= money_vnd($item['unit_price']) ?></p>
                         </div>
 
                         <div class="cart-item-actions">
@@ -131,19 +132,16 @@ include_site_header('Cart');
                                 />
 
                                 <button class="product-card-btn secondary" type="submit">
-                                    Cập nhật
+                                    Save    
                                 </button>
                             </form>
 
                             <strong><?= money_vnd($item['line_total']) ?></strong>
 
-                            <form method="post" onsubmit="return confirm('Xóa sản phẩm này khỏi giỏ hàng?')">
+                            <form method="post" onsubmit="return confirm('Delete this item from cart?')">
                                 <input type="hidden" name="action" value="remove_item" />
                                 <input type="hidden" name="product_id" value="<?= (int)$item['product_id'] ?>" />
-
-                                <button class="danger-link" type="submit">
-                                    Xóa
-                                </button>
+                                <button class="danger-link" type="submit">Delete<button>
                             </form>
                         </div>
                     </article>
@@ -151,36 +149,31 @@ include_site_header('Cart');
             </div>
 
             <aside class="cart-summary-card">
-                <h2>Tóm tắt giỏ hàng</h2>
+                <h2>Total</h2>
 
                 <div class="cart-preview-row">
-                    <span>Mã giỏ hàng</span>
+                    <span>Cart ID   </span>
                     <strong>#<?= (int)$cart['cart_id'] ?></strong>
                 </div>
 
                 <div class="cart-preview-row">
-                    <span>Số dòng sản phẩm</span>
+                    <span>Number of Products</span>
                     <strong><?= count($cart['items']) ?></strong>
                 </div>
 
                 <div class="cart-preview-total">
-                    <span>Tổng tạm tính</span>
+                    <span>Total</span>
                     <strong><?= money_vnd($cart['total']) ?></strong>
                 </div>
 
                 <a class="product-card-btn full-width" href="../task3/products.php">
-                    Tiếp tục mua sắm
+                    Add More Products
                 </a>
 
-                <a class="product-card-btn secondary full-width" href="../task3/admin-orders.php">
-                    Admin: quản lý giỏ hàng/đơn hàng
-                </a>
-
-                <form method="post" onsubmit="return confirm('Làm trống toàn bộ giỏ hàng?')">
+                <form method="post" onsubmit="return confirm('Do you want to empty cart?')">
                     <input type="hidden" name="action" value="clear_cart" />
-
                     <button class="product-card-btn danger full-width" type="submit">
-                        Làm trống giỏ hàng
+                        Empty Cart
                     </button>
                 </form>
             </aside>
@@ -188,6 +181,4 @@ include_site_header('Cart');
     <?php endif; ?>
 </main>
 
-<?php
-include_site_footer();
-?>
+<?php include_site_footer(); ?>

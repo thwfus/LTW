@@ -1,21 +1,28 @@
 <?php
-// TODO: Khởi tạo session để kiểm tra trạng thái đăng nhập
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+require_once __DIR__ . '/../task3/db.php';
 
-// Kiểm tra login và vai trò
 $isLoggedIn = isset($_SESSION['user_id']);
 $userRole = $_SESSION['role'] ?? 'guest';
 
-// Logic điều hướng User Icon: Khách -> login | Admin -> Dashboard | User -> Profile
+// Logic giỏ hàng: Mặc định là 0, nếu đăng nhập thì lấy số lượng thực tế
+$cartCount = 0;
+if ($isLoggedIn) {
+    // Sử dụng hàm get_cart_items đã viết trong db.php
+    $cartData = get_cart_items($_SESSION['user_id']);
+    // Đếm số dòng sản phẩm trong giỏ
+    $cartCount = count($cartData['items']);
+}
+
+// Logic điều hướng User Icon
 $userLink = "../html/login.php";
 if ($isLoggedIn) {
     $userLink = ($userRole === 'admin') ? "../html/admin_dashboard.php" : "../html/user.php";
 }
 
-// Logic điều hướng Cart Icon: Khách -> login | Đã đăng nhập -> Cart
-$cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.php";
+$cartLink = $isLoggedIn ? "../task3/cart.php" : "../html/login.php";
 ?>
 
 <!DOCTYPE html>
@@ -132,74 +139,7 @@ $cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.php";
                   </ul>
                 </div>
                 <div class="navigation-actions">
-                  <div class="navigation-search-wrapper">
-                    <button
-                      id="searchToggle"
-                      aria-label="Open search"
-                      class="navigation-action-btn"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                      >
-                        <g
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                        >
-                          <path d="m21 21l-4.34-4.34"></path>
-                          <circle cx="11" cy="11" r="8"></circle>
-                        </g>
-                      </svg>
-                    </button>
-                    <div id="searchDropdown" class="navigation-search-dropdown">
-                      <form
-                        action="/search"
-                        method="GET"
-                        data-form-id="ab630534-f5c4-485c-b952-60d32f0984fc"
-                        class="navigation-search-form"
-                      >
-                        <input
-                          type="search"
-                          placeholder="Search collection..."
-                          required="true"
-                          id="thq_textinput_0pF1"
-                          name="textinput"
-                          data-form-field-id="thq_textinput_0pF1"
-                          class="navigation-search-input"
-                        />
-                        <button
-                          type="submit"
-                          id="thq_button_QvbA"
-                          name="button"
-                          data-form-field-id="thq_button_QvbA"
-                          class="navigation-search-submit"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                          >
-                            <g
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                            >
-                              <path d="m21 21l-4.34-4.34"></path>
-                              <circle cx="11" cy="11" r="8"></circle>
-                            </g>
-                          </svg>
-                        </button>
-                      </form>
-                    </div>
-                  </div>
+                  
                   <a href="<?= $userLink ?>">
                     <div
                       aria-label="User profile"
@@ -252,7 +192,7 @@ $cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.php";
                           ></path>
                         </g>
                       </svg>
-                      <span class="navigation-cart-count">0</span>
+                      <span class="navigation-cart-count"><?= (int)$cartCount ?></span>
                     </div>
                   </a>
                   <button
@@ -442,9 +382,9 @@ $cartLink = $isLoggedIn ? "../html/cart.php" : "../html/login.php";
                   </li>
                 </ul>
                 <div class="navigation-mobile-footer">
-                  <a href="../task3/products.php">
+                  <a href="../html/user.php">
                     <div class="navigation-mobile-cta btn btn-primary">
-                      <span>Shop All Products</span>
+                      <span>My Profile</span>
                     </div>
                   </a>
                   <div class="navigation-mobile-util">

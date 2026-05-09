@@ -27,11 +27,16 @@ if (isset($_POST['register'])) {
         } else {
             // 3. Mã hóa mật khẩu để bảo mật
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
+
             // 4. Lưu vào bảng User
-            $insert = $pdo->prepare("INSERT INTO User (user_name, email, password, role) VALUES (?, ?, ?, 'member')");
+            $insert = $pdo->prepare("INSERT INTO User (user_name, email, password, role) VALUES (?, ?, ?, 'customer')");
             if ($insert->execute([$name, $email, $hashed_password])) {
-                // Đăng ký thành công, sang trang login kèm thông báo status
+                // 5. Tạo profile cho user mới với tên và email, còn lại để trống
+                $newUserId = $pdo->lastInsertId();
+                $year = (int)date('Y');
+                $profileInsert = $pdo->prepare("INSERT INTO profile (user_id, name, email, phone, address, avatar_url, member_since) VALUES (?, ?, ?, '', '', '', ?)");
+                $profileInsert->execute([$newUserId, $name, $email, $year]);
+
                 header("Location: login.php?status=registered");
                 exit();
             }

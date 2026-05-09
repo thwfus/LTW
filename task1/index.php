@@ -13,7 +13,7 @@ include '../php/header.php'; ?>
 <section class="hero-showcase">
           <div class="hero-showcase-background">
             <img
-              src="https://images.pexels.com/photos/27164972/pexels-photo-27164972.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
+              src="../uploads/homepage/1.jpeg"
               alt="Luxury Minimalist Interior"
               class="hero-showcase-media"
             />
@@ -68,10 +68,9 @@ include '../php/header.php'; ?>
                 <?php foreach ($featuredProducts as $product): ?>
                   <div class="product-card">
                     <div class="product-card-media">
-                      <!-- Lấy đường dẫn ảnh từ cột url, nếu rỗng dùng ảnh mặc định[cite: 3] -->
                       <img
-                        src="<?php echo htmlspecialchars($product['url'] ?: 'uploads/products/default.jpg'); ?>"
-                        alt="<?php echo htmlspecialchars($product['product_name']); ?>"
+                          src="<?php echo htmlspecialchars('/btl_ltw/' . ($product['url'] ? $product['url'] : 'uploads/products/default.jpg')); ?>"
+                          alt="<?php echo htmlspecialchars($product['product_name']); ?>"
                       />
                     </div>
                     <div class="product-card-info">
@@ -97,7 +96,7 @@ include '../php/header.php'; ?>
           <div id="roomCarousel" class="room-showcase-carousel">
             <div class="room-slide">
               <img
-                src="https://images.pexels.com/photos/3356416/pexels-photo-3356416.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
+                src="../uploads/homepage/2.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
                 alt="The Sanctuary Living Room"
                 class="room-slide-img"
               />
@@ -116,7 +115,7 @@ include '../php/header.php'; ?>
             </div>
             <div class="room-slide">
               <img
-                src="https://images.pexels.com/photos/7195591/pexels-photo-7195591.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
+                src="../uploads/homepage/3.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
                 alt="The Atelier Dining Area"
                 class="room-slide-img"
               />
@@ -135,7 +134,7 @@ include '../php/header.php'; ?>
             </div>
             <div class="room-slide">
               <img
-                src="https://images.pexels.com/photos/20337842/pexels-photo-20337842.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
+                src="../uploads/homepage/4.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
                 alt="The Minimalist Study"
                 class="room-slide-img"
               />
@@ -215,7 +214,7 @@ include '../php/header.php'; ?>
             </div>
             <div class="about-teaser-media">
               <img
-                src="https://images.pexels.com/photos/433200/pexels-photo-433200.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
+                src="../uploads/homepage/5.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1500"
                 alt="Artisan craftsmanship at Olivewood Atelier"
                 class="about-teaser-img"
               />

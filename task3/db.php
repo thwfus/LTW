@@ -16,9 +16,11 @@ if (!$conn) {
 
 mysqli_set_charset($conn, 'utf8mb4');
 
-function h($value)
-{
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+if (!function_exists('h')) {
+    function h($value)
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
 }
 
 function money_vnd($value)
@@ -247,15 +249,10 @@ function save_product_upload($fieldName, $oldPath, &$error)
 
 function get_active_cart_id($customerId, $createIfMissing = false)
 {
-    global $conn;
-
+    // Tìm giỏ hàng của khách hàng này đang ở trạng thái 'active'
     $cart = db_one(
-        "SELECT cart_id 
-         FROM cart 
-         WHERE cus_id = ? AND status = 'Đang chọn hàng'
-         ORDER BY cart_id DESC
-         LIMIT 1",
-        'i',
+        "SELECT cart_id FROM cart WHERE cus_id = ? AND status = 'active' LIMIT 1",
+        "i",
         array($customerId)
     );
 
@@ -263,44 +260,37 @@ function get_active_cart_id($customerId, $createIfMissing = false)
         return (int)$cart['cart_id'];
     }
 
-    if (!$createIfMissing) {
-        return null;
+    // Nếu chưa có giỏ hàng và yêu cầu tạo mới
+    if ($createIfMissing) {
+        $ok = db_execute(
+            "INSERT INTO cart (cus_id, status, created_at) VALUES (?, 'active', NOW())",
+            "i",
+            array($customerId)
+        );
+        if ($ok) {
+            global $conn;
+            return mysqli_insert_id($conn); // Trả về cart_id tự động tăng vừa tạo
+        }
     }
 
-    $ok = db_execute(
-        "INSERT INTO cart (created_at, status, cus_id)
-         VALUES (NOW(), 'Đang chọn hàng', ?)",
-        'i',
-        array($customerId)
-    );
-
-    if (!$ok) {
-        return null;
-    }
-
-    return mysqli_insert_id($conn);
+    return null;
 }
 
 function add_product_to_cart($customerId, $productId, $quantity, &$message)
 {
     $productId = (int)$productId;
-    $quantity = (int)$quantity;
 
-    if ($productId <= 0) {
-        $message = 'Sản phẩm không hợp lệ.';
+    // 1. Tìm cart_id tương ứng với khách hàng (Tạo mới nếu chưa có)
+    $cartId = get_active_cart_id($customerId, true);
+
+    if (!$cartId) {
+        $message = 'Không thể khởi tạo giỏ hàng.';
         return false;
     }
 
-    if ($quantity <= 0) {
-        $message = 'Số lượng phải lớn hơn 0.';
-        return false;
-    }
-
+    // 2. Lấy đơn giá hiện tại của sản phẩm từ bảng product
     $product = db_one(
-        'SELECT product_id, price, stock_quantity
-         FROM product
-         WHERE product_id = ?
-         LIMIT 1',
+        'SELECT price FROM product WHERE product_id = ? LIMIT 1',
         'i',
         array($productId)
     );
@@ -310,60 +300,40 @@ function add_product_to_cart($customerId, $productId, $quantity, &$message)
         return false;
     }
 
-    if ((int)$product['stock_quantity'] < $quantity) {
-        $message = 'Số lượng vượt quá tồn kho.';
-        return false;
-    }
+    $unitPrice = (float)$product['price'];
 
-    $cartId = get_active_cart_id($customerId, true);
-
-    if (!$cartId) {
-        $message = 'Không thể tạo giỏ hàng.';
-        return false;
-    }
-
-    $cartItem = db_one(
-        'SELECT quantity
-         FROM cartitem
-         WHERE cart_id = ? AND product_id = ?
-         LIMIT 1',
+    // 3. Kiểm tra xem sản phẩm đã tồn tại trong cart_id này chưa
+    $existingItem = db_one(
+        'SELECT quantity FROM cartitem WHERE cart_id = ? AND product_id = ? LIMIT 1',
         'ii',
         array($cartId, $productId)
     );
 
-    if ($cartItem) {
-        $newQuantity = (int)$cartItem['quantity'] + $quantity;
-
-        if ($newQuantity > (int)$product['stock_quantity']) {
-            $message = 'Số lượng trong giỏ vượt quá tồn kho.';
-            return false;
-        }
-
+    if ($existingItem) {
+        // NẾU TRÙNG: Tăng số lượng +1 (hoặc cộng thêm $quantity)
+        $newQty = (int)$existingItem['quantity'] + (int)$quantity;
         $ok = db_execute(
-            'UPDATE cartitem
-             SET quantity = ?, unit_price = ?
-             WHERE cart_id = ? AND product_id = ?',
+            'UPDATE cartitem SET quantity = ?, unit_price = ? WHERE cart_id = ? AND product_id = ?',
             'idii',
-            array($newQuantity, (float)$product['price'], $cartId, $productId)
+            array($newQty, $unitPrice, $cartId, $productId)
         );
     } else {
+        // NẾU CHƯA CÓ: Tạo mới dòng sản phẩm trong cartitem
         $ok = db_execute(
-            'INSERT INTO cartitem (cart_id, product_id, quantity, unit_price)
-             VALUES (?, ?, ?, ?)',
+            'INSERT INTO cartitem (cart_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
             'iiid',
-            array($cartId, $productId, $quantity, (float)$product['price'])
+            array($cartId, $productId, $quantity, $unitPrice)
         );
     }
 
-    if (!$ok) {
-        $message = 'Không thể thêm sản phẩm vào giỏ hàng.';
+    if ($ok) {
+        $message = 'Successfully added to your cart.';
+        return true;
+    } else {
+        $message = 'Failed to update cart items.';
         return false;
     }
-
-    $message = 'Đã thêm sản phẩm vào giỏ hàng.';
-    return true;
-}
-
+}   
 function get_cart_data($customerId)
 {
     $cartId = get_active_cart_id($customerId, false);

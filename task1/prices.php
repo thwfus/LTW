@@ -10,7 +10,7 @@ try {
     die("Lỗi kết nối cơ sở dữ liệu: " . $e->getMessage());
 }
 ?>
-<link rel="stylesheet" href="../task4/prices.css" />
+<link rel="stylesheet" href="../task1/prices.css" />
 
 <main class="prices-page-container">
     <header class="prices-header animate__animated animate__fadeIn">

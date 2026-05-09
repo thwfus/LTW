@@ -5,20 +5,30 @@ $customerId = current_customer_id($conn);
 $notice = '';
 $noticeType = 'success';
 
+// Handle Add to Cart action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_to_cart') {
-    $productId = (int)($_POST['product_id'] ?? 0);
-    $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+    // YÊU CẦU ĐĂNG NHẬP: Kiểm tra xem user đã đăng nhập chưa
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ../html/login.php"); // Chuyển hướng nếu chưa đăng nhập
+        exit();
+    }
 
-    $ok = add_to_cart($conn, $customerId, $productId, $quantity, $notice);
+    $productId = (int)($_POST['product_id'] ?? 0);
+    $quantity = 1; // Mặc định là 1 theo yêu cầu của bạn
+
+    // Gọi hàm add_to_cart với customerId lấy từ session
+    $ok = add_to_cart($conn, $_SESSION['user_id'], $productId, $quantity, $notice);
     $noticeType = $ok ? 'success' : 'error';
 }
 
+// Get filter parameters
 $keyword = trim($_GET['q'] ?? '');
 $categoryId = (int)($_GET['category_id'] ?? 0);
 $minPrice = trim($_GET['min_price'] ?? '');
 $maxPrice = trim($_GET['max_price'] ?? '');
 $sort = $_GET['sort'] ?? 'featured';
 
+// Fetch categories for filter
 $categories = [];
 $categoryResult = $conn->query('SELECT category_id, category_name FROM category ORDER BY category_name ASC');
 
@@ -26,6 +36,7 @@ if ($categoryResult) {
     $categories = $categoryResult->fetch_all(MYSQLI_ASSOC);
 }
 
+// Build SQL query with filters
 $where = [];
 $params = [];
 $types = '';
@@ -54,8 +65,8 @@ if ($maxPrice !== '' && is_numeric($maxPrice)) {
     $types .= 'd';
 }
 
+// Handle sorting logic
 $orderBy = 'p.product_id ASC';
-
 if ($sort === 'price_asc') {
     $orderBy = 'p.price ASC';
 } elseif ($sort === 'price_desc') {
@@ -79,8 +90,8 @@ $sql = '
         c.category_id,
         c.category_name,
         CASE
-            WHEN p.stock_quantity > 0 THEN "Còn hàng"
-            ELSE "Hết hàng"
+            WHEN p.stock_quantity > 0 THEN "In Stock"
+            ELSE "Out of Stock"
         END AS stock_status
     FROM product p
     JOIN category c ON p.category_id = c.category_id
@@ -92,8 +103,11 @@ if (!empty($where)) {
 
 $sql .= ' ORDER BY ' . $orderBy;
 
+// Execute prepared statement
 $stmt = $conn->prepare($sql);
-stmt_bind($stmt, $types, $params);
+if ($types !== '') {
+    stmt_bind($stmt, $types, $params);
+}
 $stmt->execute();
 $products = fetch_all_stmt($stmt);
 $stmt->close();
@@ -110,7 +124,7 @@ include_site_header('Shop All Products');
         <p class="eyebrow">Olivewood Collection</p>
         <h1 class="hero-title">Shop All Pieces</h1>
         <p class="shop-subtitle">
-            Tìm kiếm, lọc và thêm sản phẩm nội thất thủ công vào giỏ hàng.
+            Search, filter, and add handcrafted furniture pieces to your cart.
         </p>
     </header>
 
@@ -124,21 +138,20 @@ include_site_header('Shop All Products');
         <aside class="filter-sidebar">
             <form method="get" class="filter-card">
                 <div class="filter-section">
-                    <h3 class="filter-title">Tìm kiếm</h3>
+                    <h3 class="filter-title">Search</h3>
                     <input
                         class="price-input"
                         type="text"
                         name="q"
                         value="<?= h($keyword) ?>"
-                        placeholder="Nhập tên sản phẩm..."
+                        placeholder="Product name..."
                     />
                 </div>
 
                 <div class="filter-section">
-                    <h3 class="filter-title">Danh mục</h3>
+                    <h3 class="filter-title">Category</h3>
                     <select class="price-input" name="category_id">
-                        <option value="0">Tất cả danh mục</option>
-
+                        <option value="0">All Categories</option>
                         <?php foreach ($categories as $category): ?>
                             <option
                                 value="<?= (int)$category['category_id'] ?>"
@@ -151,49 +164,45 @@ include_site_header('Shop All Products');
                 </div>
 
                 <div class="filter-section">
-                    <h3 class="filter-title">Khoảng giá</h3>
-
+                    <h3 class="filter-title">Price Range</h3>
                     <div class="price-range-inputs">
                         <input
                             class="price-input"
                             type="number"
                             name="min_price"
                             value="<?= h($minPrice) ?>"
-                            placeholder="Từ"
+                            placeholder="Min"
                             min="0"
                         />
-
                         <span>—</span>
-
                         <input
                             class="price-input"
                             type="number"
                             name="max_price"
                             value="<?= h($maxPrice) ?>"
-                            placeholder="Đến"
+                            placeholder="Max"
                             min="0"
                         />
                     </div>
                 </div>
 
                 <div class="filter-section">
-                    <h3 class="filter-title">Sắp xếp</h3>
-
+                    <h3 class="filter-title">Sort By</h3>
                     <select class="price-input" name="sort">
                         <option value="featured" <?= $sort === 'featured' ? 'selected' : '' ?>>
-                            Mặc định
+                            Default
                         </option>
                         <option value="price_asc" <?= $sort === 'price_asc' ? 'selected' : '' ?>>
-                            Giá tăng dần
+                            Price: Low to High
                         </option>
                         <option value="price_desc" <?= $sort === 'price_desc' ? 'selected' : '' ?>>
-                            Giá giảm dần
+                            Price: High to Low
                         </option>
                         <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>
-                            Tên A-Z
+                            Name: A-Z
                         </option>
                         <option value="stock_desc" <?= $sort === 'stock_desc' ? 'selected' : '' ?>>
-                            Tồn kho nhiều nhất
+                            Most in Stock
                         </option>
                     </select>
                 </div>
@@ -203,16 +212,16 @@ include_site_header('Shop All Products');
                 </button>
 
                 <a class="clear-filter-link" href="../task3/products.php">
-                    Xóa bộ lọc
+                    Clear Filters
                 </a>
             </form>
 
             <div class="mini-cart-card">
-                <h3 class="filter-title">Giỏ hàng hiện tại</h3>
-                <p><?= count($cart['items']) ?> sản phẩm</p>
+                <h3 class="filter-title">Current Cart</h3>
+                <p><?= count($cart['items']) ?> products</p>
                 <strong><?= money_vnd($cart['total']) ?></strong>
                 <a class="clear-filter-link" href="../task3/cart.php">
-                    Xem giỏ hàng
+                    View Cart
                 </a>
             </div>
         </aside>
@@ -220,15 +229,12 @@ include_site_header('Shop All Products');
         <section class="products-content">
             <div class="products-toolbar">
                 <p>Showing <strong><?= count($products) ?></strong> products</p>
-                <a class="admin-shortcut" href="../task3/admin-products.php">
-                    Admin: Quản lý sản phẩm
-                </a>
-            </div>
+                </div>
 
             <?php if (empty($products)): ?>
                 <div class="empty-state">
-                    <h2>Không tìm thấy sản phẩm</h2>
-                    <p>Thử đổi từ khóa, danh mục hoặc khoảng giá.</p>
+                    <h2>No products found</h2>
+                    <p>Try changing your keyword, category, or price range.</p>
                 </div>
             <?php else: ?>
                 <div class="featured-products-grid">
@@ -252,8 +258,7 @@ include_site_header('Shop All Products');
                                 <h3><?= h($product['product_name']) ?></h3>
 
                                 <p class="product-meta">
-                                    <?= h($product['material'] ?: 'Chưa cập nhật vật liệu') ?>
-
+                                    <?= h($product['material'] ?: 'Material not updated') ?>
                                     <?php if (!empty($product['color'])): ?>
                                         · <?= h($product['color']) ?>
                                     <?php endif; ?>
@@ -270,7 +275,7 @@ include_site_header('Shop All Products');
                                 </div>
 
                                 <p class="stock-text">
-                                    Tồn kho: <?= (int)$product['stock_quantity'] ?>
+                                    In Stock: <?= (int)$product['stock_quantity'] ?>
                                 </p>
 
                                 <div class="product-card-actions">

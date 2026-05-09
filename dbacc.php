@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 $host = "localhost";
 $user = "root";
 $pass = "";
-$database = "testacc";
+$database = "btl_ltw";
 
 $conn = new mysqli($host, $user, $pass, $database);
 

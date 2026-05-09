@@ -67,14 +67,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qa_action']) && $qaTa
             $stmt = $conn->prepare("INSERT INTO `{$qaTable}` (title, content, category, status, role) VALUES (?, ?, ?, ?, ?)");
             if ($stmt) {
                 $stmt->bind_param('sssss', $title, $content, $category, $status, $role);
-                $qaMessage = $stmt->execute()
-                    ? 'Đã thêm câu hỏi mới vào database.'
-                    : 'Không thể thêm câu hỏi mới.';
-                if (!$stmt->execute()) $qaMessageType = 'error';
+    
+                if ($stmt->execute()) {
+                    $qaMessage = 'Đã thêm câu hỏi mới vào database.';
+                    $qaMessageType = 'success';
+                    
+                    // --- GIẢI PHÁP BỔ SUNG: CHỐNG F5 (REFRESH) ---
+                    // Sau khi thêm thành công, điều hướng lại trang để xóa dữ liệu POST
+                    header("Location: admin_dashboard.php?status=success#qa");
+                    exit(); 
+                }
+                else
+                {
+                    $qaMessage = 'Không thể thêm câu hỏi mới.';
+                    $qaMessageType = 'error';
+                }
                 $stmt->close();
-            } else {
-                $qaMessage = 'Không thể tạo câu lệnh thêm dữ liệu.';
-                $qaMessageType = 'error';
             }
         }
     }

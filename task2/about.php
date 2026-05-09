@@ -25,7 +25,7 @@ $isAdmin = false; // Giả lập Admin đang đăng nhập
 
     <section class="about-split-section">
         <div class="split-image">
-            <img id="heritageImg" src="https://images.pexels.com/photos/433200/pexels-photo-433200.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Workshop">
+            <img id="heritageImg" src="../uploads/homepage/5.jpeg" alt="Workshop">
             <?php if ($isAdmin): ?>
                 <input type="file" id="uploadHeritage" hidden accept="image/*">
                 <button class="edit-img-btn" onclick="document.getElementById('uploadHeritage').click()">Change Image</button>
