@@ -28,10 +28,11 @@ $sql = "
         rp.user_id,
         rp.product_id,
         rp.admin_id,
-        u.user_name AS author_name,
+        COALESCE(cu.user_name, au.user_name, 'Admin') AS author_name,
         p.product_name
     FROM review_post rp
-    JOIN user u ON rp.user_id = u.user_id
+    LEFT JOIN `user` cu ON rp.user_id = cu.user_id
+    LEFT JOIN `user` au ON rp.admin_id = au.user_id
     LEFT JOIN product p ON rp.product_id = p.product_id
     WHERE rp.status = 'approved'
     ORDER BY rp.created_at DESC, rp.review_id DESC
