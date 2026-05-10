@@ -16,7 +16,6 @@
   // 2. NHÚNG CÁC FILE LOGIC
   require_once '../task1/config_m1.php'; 
   require_once '../task3/db.php'; 
-  // require_once 'includes/qa_logic.php'; // Nhúng nếu file này đã sẵn sàng
   if (file_exists('includes/qa_logic.php')) {
     require_once 'includes/qa_logic.php';
 }
@@ -312,14 +311,334 @@ $stmt->execute([
       exit();
   }
 
+  // ===============================
+  // XỬ LÝ QUẢN LÝ SẢN PHẨM
+  // ===============================
+  $productNotice = '';
+  $productNoticeType = 'success';
+
+  // Lấy danh sách danh mục
+  $categories = $pdo->query("SELECT category_id, category_name FROM category ORDER BY category_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_action'])) {
+      $prodAction = $_POST['product_action'];
+      $productId = (int)($_POST['product_id'] ?? 0);
+      $prodName = trim($_POST['product_name'] ?? '');
+      $prodPrice = (float)($_POST['price'] ?? 0);
+      $prodStock = (int)($_POST['stock_quantity'] ?? 0);
+      $prodMaterial = trim($_POST['material'] ?? '');
+      $prodColor = trim($_POST['color'] ?? '');
+      $prodWarranty = trim($_POST['warranty_period'] ?? '');
+      $prodCategoryId = (int)($_POST['category_id'] ?? 0);
+      $prodOldUrl = trim($_POST['old_url'] ?? '');
+
+      if ($prodAction === 'create' || $prodAction === 'update') {
+          if ($prodName === '' || strlen($prodName) > 150) {
+              $productNotice = 'Tên sản phẩm không được rỗng và không vượt quá 150 ký tự.';
+              $productNoticeType = 'error';
+          } elseif ($prodPrice <= 0) {
+              $productNotice = 'Giá sản phẩm phải lớn hơn 0.';
+              $productNoticeType = 'error';
+          } elseif ($prodStock < 0) {
+              $productNotice = 'Tồn kho không được âm.';
+              $productNoticeType = 'error';
+          } elseif ($prodCategoryId <= 0) {
+              $productNotice = 'Vui lòng chọn danh mục.';
+              $productNoticeType = 'error';
+          } else {
+              // Xử lý upload ảnh
+              $imagePath = $prodOldUrl;
+              $uploadOk = true;
+              if (!empty($_FILES['product_image']['name'])) {
+                  $allowed = ['image/jpeg','image/png','image/gif','image/webp'];
+                  $fileType = $_FILES['product_image']['type'];
+                  $fileSize = $_FILES['product_image']['size'];
+                  if (!in_array($fileType, $allowed)) {
+                      $productNotice = 'Định dạng ảnh không hợp lệ (JPG, PNG, WEBP, GIF).';
+                      $productNoticeType = 'error';
+                      $uploadOk = false;
+                  } elseif ($fileSize > 3 * 1024 * 1024) {
+                      $productNotice = 'Ảnh không được vượt quá 3MB.';
+                      $productNoticeType = 'error';
+                      $uploadOk = false;
+                  } else {
+                      $uploadDir = '../uploads/products/';
+                      if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                      $ext = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
+                      $newName = 'prod_' . time() . '_' . rand(100,999) . '.' . $ext;
+                      if (move_uploaded_file($_FILES['product_image']['tmp_name'], $uploadDir . $newName)) {
+                          $imagePath = '../uploads/products/' . $newName;
+                      } else {
+                          $productNotice = 'Upload ảnh thất bại.';
+                          $productNoticeType = 'error';
+                          $uploadOk = false;
+                      }
+                  }
+              }
+              if ($imagePath === '') $imagePath = '../uploads/products/default.jpg';
+
+              if ($uploadOk) {
+                  if ($prodAction === 'create') {
+                      $stmt = $pdo->prepare('INSERT INTO product (product_name, price, stock_quantity, material, color, warranty_period, category_id, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                      $ok = $stmt->execute([$prodName, $prodPrice, $prodStock, $prodMaterial, $prodColor, $prodWarranty, $prodCategoryId, $imagePath]);
+                      $productNotice = $ok ? 'Đã thêm sản phẩm mới.' : 'Không thể thêm sản phẩm.';
+                      $productNoticeType = $ok ? 'success' : 'error';
+                  } else {
+                      $stmt = $pdo->prepare('UPDATE product SET product_name=?, price=?, stock_quantity=?, material=?, color=?, warranty_period=?, category_id=?, url=? WHERE product_id=?');
+                      $ok = $stmt->execute([$prodName, $prodPrice, $prodStock, $prodMaterial, $prodColor, $prodWarranty, $prodCategoryId, $imagePath, $productId]);
+                      $productNotice = $ok ? 'Đã cập nhật sản phẩm.' : 'Không thể cập nhật sản phẩm.';
+                      $productNoticeType = $ok ? 'success' : 'error';
+                  }
+                  $_SESSION['admin_notice'] = $productNotice;
+                  header("Location: admin_dashboard.php#products");
+                  exit();
+              }
+          }
+      } elseif ($prodAction === 'delete') {
+          $stmt = $pdo->prepare('DELETE FROM product WHERE product_id = ?');
+          $ok = $stmt->execute([$productId]);
+          $productNotice = $ok ? 'Đã xóa sản phẩm.' : 'Không thể xóa vì sản phẩm có thể đang nằm trong giỏ hàng hoặc đơn hàng.';
+          $_SESSION['admin_notice'] = $productNotice;
+          header("Location: admin_dashboard.php#products");
+          exit();
+      }
+  }
+
+  // Lấy sản phẩm đang sửa (nếu có)
+  $prodEditId = (int)($_GET['edit_product'] ?? 0);
+  $editProduct = null;
+  if ($prodEditId > 0) {
+      $stmt = $pdo->prepare('SELECT * FROM product WHERE product_id = ? LIMIT 1');
+      $stmt->execute([$prodEditId]);
+      $editProduct = $stmt->fetch(PDO::FETCH_ASSOC);
+  }
+
+  // Tìm kiếm & phân trang sản phẩm
+  $prodQ = trim($_GET['prod_q'] ?? '');
+  $prodCatFilter = (int)($_GET['prod_category'] ?? 0);
+  $prodPage = max(1, (int)($_GET['prod_page'] ?? 1));
+  $prodPerPage = 8;
+  $prodOffset = ($prodPage - 1) * $prodPerPage;
+
+  $prodWhere = []; $prodParams = [];
+  if ($prodQ !== '') {
+      $prodWhere[] = '(p.product_name LIKE ? OR p.material LIKE ? OR p.color LIKE ?)';
+      $like = '%' . $prodQ . '%';
+      $prodParams[] = $like; $prodParams[] = $like; $prodParams[] = $like;
+  }
+  if ($prodCatFilter > 0) {
+      $prodWhere[] = 'p.category_id = ?';
+      $prodParams[] = $prodCatFilter;
+  }
+  $prodWhereSql = !empty($prodWhere) ? 'WHERE ' . implode(' AND ', $prodWhere) : '';
+
+  $countStmt = $pdo->prepare("SELECT COUNT(*) FROM product p JOIN category c ON p.category_id = c.category_id $prodWhereSql");
+  $countStmt->execute($prodParams);
+  $prodTotalRows = (int)$countStmt->fetchColumn();
+  $prodTotalPages = max(1, ceil($prodTotalRows / $prodPerPage));
+
+  $listStmt = $pdo->prepare("SELECT p.*, c.category_name FROM product p JOIN category c ON p.category_id = c.category_id $prodWhereSql ORDER BY p.product_id DESC LIMIT $prodPerPage OFFSET $prodOffset");
+  $listStmt->execute($prodParams);
+  $products = $listStmt->fetchAll(PDO::FETCH_ASSOC);
+
+  // Helper format tiền VND
+  if (!function_exists('money_vnd')) {
+      function money_vnd($amount) {
+          return number_format((float)$amount, 0, ',', '.') . ' ₫';
+      }
+  }
+  // Helper ảnh sản phẩm an toàn
+  if (!function_exists('safe_product_image')) {
+      function safe_product_image($url) {
+          if (empty($url)) return '../uploads/products/default.jpg';
+          if (str_starts_with($url, 'http')) return $url;
+          return '../' . ltrim($url, '/');
+      }
+  }
+
+  // Cập nhật $totalProducts từ DB
+  $totalProducts = $pdo->query("SELECT COUNT(*) FROM product")->fetchColumn();
+
+  // ===============================
+  // XỬ LÝ QUẢN LÝ ĐƠN HÀNG & GIỎ HÀNG
+  // ===============================
+  $cartStatuses  = ['Đang chọn hàng', 'Đã đặt hàng', 'Đã hủy'];
+  $orderStatuses = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao', 'Hoàn thành', 'Đã hủy'];
+
+  // Đảm bảo cột status tồn tại (migrate an toàn)
+  try {
+      $pdo->query("SELECT status FROM orders LIMIT 1");
+  } catch (Exception $e) {
+      try { $pdo->exec("ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT 'Chờ xử lý'"); } catch (Exception $e2) {}
+  }
+
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_action'])) {
+      $oAction = $_POST['order_action'];
+
+      if ($oAction === 'update_cart_status') {
+          $cartId  = (int)($_POST['cart_id'] ?? 0);
+          $cStatus = trim($_POST['status'] ?? '');
+          if (in_array($cStatus, $cartStatuses)) {
+              $pdo->prepare('UPDATE cart SET status = ? WHERE cart_id = ?')->execute([$cStatus, $cartId]);
+              $_SESSION['admin_notice'] = 'Đã cập nhật trạng thái giỏ hàng.';
+          }
+          header('Location: admin_dashboard.php#orders'); exit();
+      }
+
+      if ($oAction === 'update_order_status') {
+          $orderId = (int)($_POST['order_id'] ?? 0);
+          $oStatus = trim($_POST['status'] ?? '');
+          if (in_array($oStatus, $orderStatuses)) {
+              $pdo->prepare('UPDATE orders SET status = ? WHERE order_id = ?')->execute([$oStatus, $orderId]);
+              $_SESSION['admin_notice'] = 'Đã cập nhật trạng thái đơn hàng.';
+          }
+          header('Location: admin_dashboard.php#orders'); exit();
+      }
+  }
+
+  // Tìm kiếm & phân trang
+  $orderQ    = trim($_GET['order_q'] ?? '');
+  $cartPage  = max(1, (int)($_GET['cart_page']  ?? 1));
+  $orderPage = max(1, (int)($_GET['order_page'] ?? 1));
+  $ordPerPage = 6;
+
+  // --- Giỏ hàng ---
+  $cartWhere = []; $cartParams = [];
+  if ($orderQ !== '') {
+      $cartWhere[] = '(CAST(c.cart_id AS CHAR) LIKE ? OR u.user_name LIKE ? OR u.email LIKE ? OR c.status LIKE ?)';
+      $like = '%' . $orderQ . '%';
+      $cartParams = [$like, $like, $like, $like];
+  }
+  $cartWhereSql = $cartWhere ? 'WHERE ' . implode(' AND ', $cartWhere) : '';
+
+  $stmt2 = $pdo->prepare("SELECT COUNT(*) FROM cart c JOIN `User` u ON c.cus_id = u.user_id $cartWhereSql");
+  $stmt2->execute($cartParams);
+  $cartTotal = (int)$stmt2->fetchColumn();
+  $cartTotalPages = max(1, ceil($cartTotal / $ordPerPage));
+  $cartOffset = ($cartPage - 1) * $ordPerPage;
+
+  $cartStmt = $pdo->prepare("SELECT c.cart_id, c.created_at, c.status, c.cus_id, u.user_name, u.email,
+      COALESCE(SUM(ci.quantity),0) AS item_count,
+      COALESCE(SUM(ci.quantity * ci.unit_price),0) AS cart_total
+      FROM cart c JOIN `User` u ON c.cus_id = u.user_id
+      LEFT JOIN cartitem ci ON c.cart_id = ci.cart_id
+      $cartWhereSql
+      GROUP BY c.cart_id, c.created_at, c.status, c.cus_id, u.user_name, u.email
+      ORDER BY c.created_at DESC, c.cart_id DESC LIMIT $ordPerPage OFFSET $cartOffset");
+  $cartStmt->execute($cartParams);
+  $carts = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
+
+  // --- Đơn hàng ---
+  $ordWhere = []; $ordParams = [];
+  if ($orderQ !== '') {
+      $ordWhere[] = '(CAST(o.order_id AS CHAR) LIKE ? OR u.user_name LIKE ? OR u.email LIKE ? OR o.status LIKE ?)';
+      $like = '%' . $orderQ . '%';
+      $ordParams = [$like, $like, $like, $like];
+  }
+  $ordWhereSql = $ordWhere ? 'WHERE ' . implode(' AND ', $ordWhere) : '';
+  $ordCountStmt = $pdo->prepare("SELECT COUNT(*) FROM orders o JOIN `User` u ON o.cus_id = u.user_id $ordWhereSql");
+  $ordCountStmt->execute($ordParams);
+  $ordTotal = (int)$ordCountStmt->fetchColumn();
+  $ordTotalPages = max(1, ceil($ordTotal / $ordPerPage));
+  $ordOffset = ($orderPage - 1) * $ordPerPage;
+
+  $ordStmt = $pdo->prepare("SELECT o.order_id, o.order_date, o.status, o.total_amount, o.shipping_fee,
+      u.user_name, u.email,
+      a.recipient_name, a.phone, a.ward, a.city,
+      p.payment_method
+      FROM orders o JOIN `User` u ON o.cus_id = u.user_id
+      JOIN address a ON o.address_id = a.address_id
+      LEFT JOIN payment p ON o.order_id = p.order_id
+      $ordWhereSql
+      ORDER BY o.order_date DESC, o.order_id DESC LIMIT $ordPerPage OFFSET $ordOffset");
+  $ordStmt->execute($ordParams);
+  $orders = $ordStmt->fetchAll(PDO::FETCH_ASSOC);
+
+  // Chi tiết đơn hàng
+  $detailOrderId = (int)($_GET['order_detail'] ?? 0);
+  $orderItems = [];
+  if ($detailOrderId > 0) {
+      $diStmt = $pdo->prepare('SELECT oi.*, p.product_name, p.url, c.category_name
+          FROM orderitem oi JOIN product p ON oi.product_id = p.product_id
+          JOIN category c ON p.category_id = c.category_id
+          WHERE oi.order_id = ? ORDER BY oi.product_id ASC');
+      $diStmt->execute([$detailOrderId]);
+      $orderItems = $diStmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  // Cập nhật $totalOrders từ DB thực
+  $totalOrders = (int)$pdo->query("SELECT COUNT(*) FROM orders")->fetchColumn();
+
+  // ===============================
+  // XỬ LÝ QUẢN LÝ THÀNH VIÊN
+  // ===============================
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action'])) {
+      $uAction = $_POST['user_action'];
+      $uId     = (int)($_POST['user_id'] ?? 0);
+
+      if ($uAction === 'delete' && $uId > 0) {
+          if ($uId === (int)$_SESSION['user_id']) {
+              $_SESSION['admin_notice'] = 'Không thể xóa tài khoản đang đăng nhập.';
+          } else {
+              $pdo->prepare("DELETE FROM `User` WHERE user_id = ?")->execute([$uId]);
+              $_SESSION['admin_notice'] = 'Đã xóa thành viên.';
+          }
+          header('Location: admin_dashboard.php#users'); exit();
+      }
+
+      if ($uAction === 'change_role' && $uId > 0) {
+          $newRole = strtolower(trim($_POST['new_role'] ?? ''));
+          if (in_array($newRole, ['admin', 'customer'])) {
+              if ($uId === (int)$_SESSION['user_id'] && $newRole === 'customer') {
+                  $_SESSION['admin_notice'] = 'Không thể tự hạ quyền tài khoản đang đăng nhập.';
+              } else {
+                  $pdo->prepare("UPDATE `User` SET role = ? WHERE user_id = ?")->execute([$newRole, $uId]);
+                  if ($newRole === 'admin') {
+                      try { $pdo->prepare("INSERT IGNORE INTO admin (user_id) VALUES (?)")->execute([$uId]); } catch (Exception $e) {}
+                  } else {
+                      try { $pdo->prepare("DELETE FROM admin WHERE user_id = ?")->execute([$uId]); } catch (Exception $e) {}
+                  }
+                  $_SESSION['admin_notice'] = 'Đã cập nhật quyền thành viên.';
+              }
+          }
+          header('Location: admin_dashboard.php#users'); exit();
+      }
+  }
+
+  // Lấy danh sách thành viên
+  $userQ          = trim($_GET['user_q'] ?? '');
+  $userRoleFilter = trim($_GET['user_role'] ?? '');
+  $userPage       = max(1, (int)($_GET['user_page'] ?? 1));
+  $userPerPage    = 10;
+
+  $userWhere = []; $userParams = [];
+  if ($userQ !== '') {
+      $userWhere[] = '(user_name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+      $like = '%' . $userQ . '%';
+      $userParams = [$like, $like, $like];
+  }
+  if (in_array(strtolower($userRoleFilter), ['admin', 'customer'])) {
+      $userWhere[] = 'LOWER(role) = ?';
+      $userParams[] = strtolower($userRoleFilter);
+  }
+  $userWhereSql = $userWhere ? 'WHERE ' . implode(' AND ', $userWhere) : '';
+
+  $uCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `User` $userWhereSql");
+  $uCountStmt->execute($userParams);
+  $userTotal      = (int)$uCountStmt->fetchColumn();
+  $userTotalPages = max(1, ceil($userTotal / $userPerPage));
+  $userOffset     = ($userPage - 1) * $userPerPage;
+
+  $uStmt = $pdo->prepare("SELECT user_id, user_name, email, phone, password, role FROM `User` $userWhereSql ORDER BY user_id DESC LIMIT $userPerPage OFFSET $userOffset");
+  $uStmt->execute($userParams);
+  $users = $uStmt->fetchAll(PDO::FETCH_ASSOC);
+
   // 3. LẤY DỮ LIỆU HIỂN THỊ
   $company = $pdo->query("SELECT * FROM Web_Info WHERE info_id = 1")->fetch();
   $messages = $pdo->query("SELECT * FROM Contact_Messages ORDER BY created_at DESC")->fetchAll();
   $unreadCount = count(array_filter($messages, fn($m) => $m['status'] == 'Chưa đọc'));
 
-  // Giả lập số liệu cho phần Stats
-  $totalProducts = 128; 
-  $totalOrders = 24;
+  // $totalProducts và $totalOrders được lấy từ DB thực ở các section logic bên trên
 
   // Lấy danh sách bài review
   // Lấy danh sách bài review, có tìm kiếm
@@ -1062,27 +1381,523 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
           </div>
         </section>
 
-        <section id="products" class="admin-section placeholder-view">
-            <div class="placeholder-content">
-                <h2>Quản lý sản phẩm</h2>
-                <p>Chức năng đang được chuẩn bị để tích hợp cơ sở dữ liệu Task 3.</p>
+        <section id="products" class="admin-section">
+          <style>
+            .products-layout {
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+              gap: 24px;
+              align-items: start;
+            }
+            @media (max-width: 1100px) {
+              .products-layout {
+                grid-template-columns: 1fr;
+              }
+            }
+            /* Bảng sản phẩm cuộn ngang trên màn hình hẹp */
+            .products-layout .table-container {
+              overflow-x: auto;
+              -webkit-overflow-scrolling: touch;
+            }
+            /* Thu gọn form khi stack */
+            .products-layout .admin-form .form-grid {
+              grid-template-columns: 1fr 1fr;
+            }
+            @media (max-width: 600px) {
+              .products-layout .admin-form .form-grid {
+                grid-template-columns: 1fr;
+              }
+            }
+          </style>
+
+          <!-- Thông báo sản phẩm -->
+          <?php if (!empty($productNotice)): ?>
+            <div class="admin-alert <?= $productNoticeType === 'error' ? 'admin-alert-error' : '' ?>" style="margin-bottom:16px;">
+              <?= h($productNotice) ?>
             </div>
+          <?php endif; ?>
+
+          <div class="products-layout">
+
+            <!-- Form thêm / sửa sản phẩm -->
+            <div class="admin-card">
+              <div class="card-header">
+                <h2><?= $editProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới' ?></h2>
+              </div>
+              <form method="POST" action="admin_dashboard.php#products" enctype="multipart/form-data" class="admin-form" id="productForm">
+                <input type="hidden" name="product_action" value="<?= $editProduct ? 'update' : 'create' ?>">
+                <input type="hidden" name="product_id" value="<?= $editProduct ? (int)$editProduct['product_id'] : 0 ?>">
+                <input type="hidden" name="old_url" value="<?= h($editProduct ? $editProduct['url'] : '') ?>">
+
+                <div class="form-group">
+                  <label>Tên sản phẩm</label>
+                  <input type="text" name="product_name" class="form-control" maxlength="150" required
+                    value="<?= h($editProduct ? $editProduct['product_name'] : '') ?>">
+                </div>
+
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+                  <div class="form-group">
+                    <label>Giá (₫)</label>
+                    <input type="number" name="price" min="1" step="1000" required
+                      value="<?= h($editProduct ? $editProduct['price'] : '') ?>">
+                  </div>
+                  <div class="form-group">
+                    <label>Tồn kho</label>
+                    <input type="number" name="stock_quantity" min="0" required
+                      value="<?= h($editProduct ? $editProduct['stock_quantity'] : 0) ?>">
+                  </div>
+                  <div class="form-group">
+                    <label>Vật liệu</label>
+                    <input type="text" name="material" value="<?= h($editProduct ? $editProduct['material'] : '') ?>">
+                  </div>
+                  <div class="form-group">
+                    <label>Màu sắc</label>
+                    <input type="text" name="color" value="<?= h($editProduct ? $editProduct['color'] : '') ?>">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Bảo hành</label>
+                  <input type="text" name="warranty_period" value="<?= h($editProduct ? $editProduct['warranty_period'] : '') ?>">
+                </div>
+
+                <div class="form-group">
+                  <label>Danh mục</label>
+                  <select name="category_id" required>
+                    <option value="">-- Chọn danh mục --</option>
+                    <?php foreach ($categories as $cat): ?>
+                      <option value="<?= (int)$cat['category_id'] ?>"
+                        <?= ($editProduct && (int)$editProduct['category_id'] === (int)$cat['category_id']) ? 'selected' : '' ?>>
+                        <?= h($cat['category_name']) ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Ảnh sản phẩm</label>
+                  <input type="file" name="product_image" accept="image/*" style="padding:6px;">
+                  <small style="color:#888; font-size:12px;">JPG, PNG, WEBP, GIF. Tối đa 3MB.</small>
+                </div>
+
+                <?php if ($editProduct && !empty($editProduct['url'])): ?>
+                  <div class="form-group">
+                    <img src="<?= h(safe_product_image($editProduct['url'])) ?>" alt="Ảnh hiện tại"
+                      style="max-width:120px; border-radius:8px; border:1px solid #e0d5c5;">
+                  </div>
+                <?php endif; ?>
+
+                <div class="form-footer" style="gap:10px; display:flex;">
+                  <button type="submit" class="btn-submit">
+                    <?= $editProduct ? 'Lưu thay đổi' : 'Thêm sản phẩm' ?>
+                  </button>
+                  <?php if ($editProduct): ?>
+                    <a href="admin_dashboard.php#products" class="btn-submit" style="background:#888; text-decoration:none; display:inline-flex; align-items:center;">Hủy</a>
+                  <?php endif; ?>
+                </div>
+              </form>
+            </div>
+
+            <!-- Danh sách sản phẩm -->
+            <div class="admin-card">
+              <div class="card-header">
+                <h2>Danh sách sản phẩm <span style="color:#888; font-size:14px; font-weight:400;">(<?= $prodTotalRows ?> sản phẩm)</span></h2>
+              </div>
+
+              <!-- Tìm kiếm -->
+              <form method="GET" action="admin_dashboard.php#products" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+                <input type="text" name="prod_q" value="<?= h($prodQ) ?>" placeholder="Tên, vật liệu, màu sắc..."
+                  style="flex:1; min-width:140px; padding:8px 12px; border:1px solid #d9cfc2; border-radius:6px; font-size:14px;">
+                <select name="prod_category" style="flex:1; min-width:130px; max-width:200px; padding:8px 12px; border:1px solid #d9cfc2; border-radius:6px; font-size:14px;">
+                  <option value="0">Tất cả danh mục</option>
+                  <?php foreach ($categories as $cat): ?>
+                    <option value="<?= (int)$cat['category_id'] ?>" <?= $prodCatFilter === (int)$cat['category_id'] ? 'selected' : '' ?>>
+                      <?= h($cat['category_name']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <div style="display:flex; gap:6px; flex-shrink:0;">
+                  <button type="submit" class="btn-submit" style="padding:8px 16px; font-size:14px;">Tìm</button>
+                  <a href="admin_dashboard.php#products" class="btn-submit" style="background:#888; text-decoration:none; display:inline-flex; align-items:center; padding:8px 14px; font-size:14px;">Reset</a>
+                </div>
+              </form>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Ảnh</th>
+                      <th>Tên sản phẩm</th>
+                      <th>Danh mục</th>
+                      <th>Giá</th>
+                      <th>Tồn</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php if (!empty($products)): ?>
+                      <?php foreach ($products as $prod): ?>
+                        <tr>
+                          <td>#<?= (int)$prod['product_id'] ?></td>
+                          <td>
+                            <img src="<?= h(safe_product_image($prod['url'])) ?>"
+                              alt="<?= h($prod['product_name']) ?>"
+                              style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid #e0d5c5;">
+                          </td>
+                          <td>
+                            <strong><?= h($prod['product_name']) ?></strong><br>
+                            <small style="color:#888;"><?= h($prod['material']) ?> · <?= h($prod['color']) ?></small>
+                          </td>
+                          <td><?= h($prod['category_name']) ?></td>
+                          <td style="white-space:nowrap;"><?= money_vnd($prod['price']) ?></td>
+                          <td><?= (int)$prod['stock_quantity'] ?></td>
+                          <td>
+                            <div class="action-btns">
+                              <a href="admin_dashboard.php?edit_product=<?= (int)$prod['product_id'] ?>#products"
+                                class="btn-table">Sửa</a>
+                              <form method="POST" action="admin_dashboard.php#products" class="d-inline"
+                                onsubmit="return confirm('Xác nhận xóa sản phẩm này?')">
+                                <input type="hidden" name="product_action" value="delete">
+                                <input type="hidden" name="product_id" value="<?= (int)$prod['product_id'] ?>">
+                                <button type="submit" class="btn-table btn-danger">Xóa</button>
+                              </form>
+                            </div>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php else: ?>
+                      <tr><td colspan="7" class="empty-row">Không có sản phẩm phù hợp.</td></tr>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Phân trang -->
+              <?php if ($prodTotalPages > 1): ?>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:16px; align-items:center;">
+                  <?php for ($i = 1; $i <= $prodTotalPages; $i++): ?>
+                    <?php
+                      $pageUrl = 'admin_dashboard.php?prod_page=' . $i
+                        . ($prodQ !== '' ? '&prod_q=' . urlencode($prodQ) : '')
+                        . ($prodCatFilter > 0 ? '&prod_category=' . $prodCatFilter : '')
+                        . '#products';
+                    ?>
+                    <a href="<?= $pageUrl ?>"
+                      style="padding:6px 12px; border-radius:6px; border:1px solid #d9cfc2; text-decoration:none; font-size:13px;
+                        <?= $i === $prodPage ? 'background:#1e4e36; color:#fff;' : 'color:#1e4e36;' ?>">
+                      <?= $i ?>
+                    </a>
+                  <?php endfor; ?>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <script>
+          document.getElementById('productForm')?.addEventListener('submit', function(e) {
+            const name = this.querySelector('[name=product_name]').value.trim();
+            const price = Number(this.querySelector('[name=price]').value);
+            const stock = Number(this.querySelector('[name=stock_quantity]').value);
+            const cat = this.querySelector('[name=category_id]').value;
+            const img = this.querySelector('[name=product_image]');
+            if (!name || name.length > 150) { alert('Tên sản phẩm không hợp lệ.'); e.preventDefault(); return; }
+            if (!price || price <= 0) { alert('Giá phải lớn hơn 0.'); e.preventDefault(); return; }
+            if (stock < 0) { alert('Tồn kho không được âm.'); e.preventDefault(); return; }
+            if (!cat) { alert('Vui lòng chọn danh mục.'); e.preventDefault(); return; }
+            if (img.files.length > 0 && img.files[0].size > 3 * 1024 * 1024) { alert('Ảnh không được vượt quá 3MB.'); e.preventDefault(); }
+          });
+          </script>
         </section>
 
-        <section id="orders" class="admin-section placeholder-view">
-            <div class="placeholder-content">
-                <h2>Quản lý Đơn hàng & Giỏ hàng</h2>
-                <p>Chức năng theo dõi tiến độ đơn hàng và thanh toán đang được phát triển.</p>
+        <section id="orders" class="admin-section">
+          <!-- Thanh tìm kiếm -->
+          <div class="admin-card" style="margin-bottom:20px;">
+            <div class="card-header"><h2>Tìm kiếm đơn hàng & Giỏ hàng</h2></div>
+            <form method="GET" action="admin_dashboard.php#orders" style="display:flex; gap:10px; flex-wrap:wrap;">
+              <input type="text" name="order_q" value="<?= h($orderQ) ?>" placeholder="Mã, tên khách, email, trạng thái..."
+                style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d9cfc2; border-radius:6px; font-size:14px;">
+              <button type="submit" class="btn-submit" style="padding:8px 18px; font-size:14px;">Tìm</button>
+              <a href="admin_dashboard.php#orders" class="btn-submit" style="background:#888; text-decoration:none; display:inline-flex; align-items:center; padding:8px 14px; font-size:14px;">Reset</a>
+            </form>
+          </div>
+
+          <!-- Giỏ hàng -->
+          <div class="admin-card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <h2>Danh sách Giỏ hàng <span style="color:#888; font-size:14px; font-weight:400;">(<?= $cartTotal ?> giỏ)</span></h2>
             </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã giỏ</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày tạo</th>
+                    <th>Số SP</th>
+                    <th>Tổng tạm tính</th>
+                    <th>Trạng thái</th>
+                    <th>Cập nhật</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (!empty($carts)): ?>
+                    <?php foreach ($carts as $cart): ?>
+                      <tr>
+                        <td>#<?= (int)$cart['cart_id'] ?></td>
+                        <td><strong><?= h($cart['user_name']) ?></strong><br><small><?= h($cart['email']) ?></small></td>
+                        <td><?= h($cart['created_at']) ?></td>
+                        <td><?= (int)$cart['item_count'] ?></td>
+                        <td style="white-space:nowrap;"><?= money_vnd($cart['cart_total']) ?></td>
+                        <td><span class="status-badge"><?= h($cart['status']) ?></span></td>
+                        <td>
+                          <form method="POST" action="admin_dashboard.php#orders" style="display:flex; gap:6px; align-items:center;">
+                            <input type="hidden" name="order_action" value="update_cart_status">
+                            <input type="hidden" name="cart_id" value="<?= (int)$cart['cart_id'] ?>">
+                            <select name="status" style="padding:5px 8px; border:1px solid #d9cfc2; border-radius:6px; font-size:13px;">
+                              <?php foreach ($cartStatuses as $cs): ?>
+                                <option value="<?= h($cs) ?>" <?= $cs === $cart['status'] ? 'selected' : '' ?>><?= h($cs) ?></option>
+                              <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="btn-table">Lưu</button>
+                          </form>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <tr><td colspan="7" class="empty-row">Không có giỏ hàng phù hợp.</td></tr>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+            <?php if ($cartTotalPages > 1): ?>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:14px;">
+                <?php for ($i = 1; $i <= $cartTotalPages; $i++): ?>
+                  <a href="admin_dashboard.php?cart_page=<?= $i ?><?= $orderQ ? '&order_q=' . urlencode($orderQ) : '' ?>#orders"
+                    style="padding:5px 11px; border-radius:6px; border:1px solid #d9cfc2; text-decoration:none; font-size:13px; <?= $i === $cartPage ? 'background:#1e4e36; color:#fff;' : 'color:#1e4e36;' ?>"><?= $i ?></a>
+                <?php endfor; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <!-- Đơn hàng -->
+          <div class="admin-card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <h2>Danh sách Đơn hàng <span style="color:#888; font-size:14px; font-weight:400;">(<?= $ordTotal ?> đơn)</span></h2>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Người nhận</th>
+                    <th>Ngày đặt</th>
+                    <th>Thanh toán</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (!empty($orders)): ?>
+                    <?php foreach ($orders as $order): ?>
+                      <tr>
+                        <td>#<?= (int)$order['order_id'] ?></td>
+                        <td><strong><?= h($order['user_name']) ?></strong><br><small><?= h($order['email']) ?></small></td>
+                        <td>
+                          <?= h($order['recipient_name']) ?><br>
+                          <small><?= h($order['phone']) ?> · <?= h($order['ward']) ?>, <?= h($order['city']) ?></small>
+                        </td>
+                        <td><?= h($order['order_date']) ?></td>
+                        <td><?= h($order['payment_method'] ?: 'Chưa có') ?></td>
+                        <td style="white-space:nowrap;"><?= money_vnd($order['total_amount']) ?></td>
+                        <td><span class="status-badge"><?= h($order['status']) ?></span></td>
+                        <td>
+                          <form method="POST" action="admin_dashboard.php#orders" style="display:flex; flex-direction:column; gap:6px;">
+                            <input type="hidden" name="order_action" value="update_order_status">
+                            <input type="hidden" name="order_id" value="<?= (int)$order['order_id'] ?>">
+                            <div style="display:flex; gap:6px; align-items:center;">
+                              <select name="status" style="padding:5px 8px; border:1px solid #d9cfc2; border-radius:6px; font-size:13px;">
+                                <?php foreach ($orderStatuses as $os): ?>
+                                  <option value="<?= h($os) ?>" <?= $os === $order['status'] ? 'selected' : '' ?>><?= h($os) ?></option>
+                                <?php endforeach; ?>
+                              </select>
+                              <button type="submit" class="btn-table">Lưu</button>
+                            </div>
+                          </form>
+                          <a href="admin_dashboard.php?order_detail=<?= (int)$order['order_id'] ?>#orders"
+                            class="btn-table" style="margin-top:6px; display:inline-block; text-decoration:none;">Chi tiết</a>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <tr><td colspan="8" class="empty-row">Không có đơn hàng phù hợp.</td></tr>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+            <?php if ($ordTotalPages > 1): ?>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:14px;">
+                <?php for ($i = 1; $i <= $ordTotalPages; $i++): ?>
+                  <a href="admin_dashboard.php?order_page=<?= $i ?><?= $orderQ ? '&order_q=' . urlencode($orderQ) : '' ?>#orders"
+                    style="padding:5px 11px; border-radius:6px; border:1px solid #d9cfc2; text-decoration:none; font-size:13px; <?= $i === $orderPage ? 'background:#1e4e36; color:#fff;' : 'color:#1e4e36;' ?>"><?= $i ?></a>
+                <?php endfor; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <!-- Chi tiết đơn hàng -->
+          <?php if ($detailOrderId > 0): ?>
+          <div class="admin-card">
+            <div class="card-header">
+              <h2>Chi tiết đơn hàng #<?= $detailOrderId ?></h2>
+              <a href="admin_dashboard.php#orders" style="font-size:13px; color:#888;">&larr; Đóng</a>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Ảnh</th><th>Sản phẩm</th><th>Danh mục</th><th>Số lượng</th><th>Giá bán</th><th>Thành tiền</th></tr>
+                </thead>
+                <tbody>
+                  <?php if (!empty($orderItems)): ?>
+                    <?php foreach ($orderItems as $item): ?>
+                      <tr>
+                        <td><img src="<?= h(safe_product_image($item['url'])) ?>" alt="<?= h($item['product_name']) ?>"
+                          style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid #e0d5c5;"></td>
+                        <td><?= h($item['product_name']) ?></td>
+                        <td><?= h($item['category_name']) ?></td>
+                        <td><?= (int)$item['quantity'] ?></td>
+                        <td><?= money_vnd($item['sold_price']) ?></td>
+                        <td><?= money_vnd($item['subtotal']) ?></td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <tr><td colspan="6" class="empty-row">Không có sản phẩm trong đơn hàng này.</td></tr>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <?php endif; ?>
         </section>
 
         
 
-        <section id="users" class="admin-section placeholder-view">
-            <div class="placeholder-content">
-                <h2>Quản lý thành viên</h2>
-                <p>Phân quyền và quản lý tài khoản khách hàng.</p>
+        <section id="users" class="admin-section">
+          <div class="admin-card">
+            <div class="card-header">
+              <h2>Quản lý Thành viên <span style="color:#888; font-size:14px; font-weight:400;">(<?= $userTotal ?> tài khoản)</span></h2>
+              <p>Xem thông tin, đổi quyền (Admin ↔ Customer) hoặc xóa tài khoản. Không thể thêm tài khoản mới từ đây.</p>
             </div>
+
+            <!-- Tìm kiếm & lọc -->
+            <form method="GET" action="admin_dashboard.php#users" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">
+              <input type="text" name="user_q" value="<?= h($userQ) ?>" placeholder="Tên, email, số điện thoại..."
+                style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d9cfc2; border-radius:6px; font-size:14px;">
+              <select name="user_role" style="padding:8px 12px; border:1px solid #d9cfc2; border-radius:6px; font-size:14px;">
+                <option value="">Tất cả quyền</option>
+                <option value="admin"    <?= strtolower($userRoleFilter) === 'admin'    ? 'selected' : '' ?>>Admin</option>
+                <option value="customer" <?= strtolower($userRoleFilter) === 'customer' ? 'selected' : '' ?>>Customer</option>
+              </select>
+              <button type="submit" class="btn-submit" style="padding:8px 18px; font-size:14px;">Tìm</button>
+              <a href="admin_dashboard.php#users" class="btn-submit" style="background:#888; text-decoration:none; display:inline-flex; align-items:center; padding:8px 14px; font-size:14px;">Reset</a>
+            </form>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Tên tài khoản</th>
+                    <th>Email</th>
+                    <th>Số điện thoại</th>
+                    <th>Mật khẩu (hash)</th>
+                    <th>Quyền</th>
+                    <th>Đổi quyền</th>
+                    <th>Xóa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (!empty($users)): ?>
+                    <?php foreach ($users as $u): ?>
+                      <?php
+                        $isSelf  = (int)$u['user_id'] === (int)$_SESSION['user_id'];
+                        $isAdmin = strtolower($u['role']) === 'admin';
+                      ?>
+                      <tr style="<?= $isSelf ? 'background:#f0f7f3;' : '' ?>">
+                        <td>#<?= (int)$u['user_id'] ?></td>
+                        <td>
+                          <strong><?= h($u['user_name']) ?></strong>
+                          <?php if ($isSelf): ?><span style="font-size:11px; background:#1e4e36; color:#fff; border-radius:10px; padding:1px 7px; margin-left:4px;">Bạn</span><?php endif; ?>
+                        </td>
+                        <td><?= h($u['email']) ?></td>
+                        <td><?= h($u['phone'] ?: '—') ?></td>
+                        <td>
+                          <details style="cursor:pointer;">
+                            <summary style="color:#1e4e36; font-size:12px; font-weight:600;">Xem hash</summary>
+                            <div style="font-size:11px; color:#888; word-break:break-all; margin-top:4px; max-width:220px;"><?= h($u['password']) ?></div>
+                          </details>
+                        </td>
+                        <td>
+                          <span class="status-badge <?= $isAdmin ? 'status-read' : '' ?>" style="<?= !$isAdmin ? 'background:#f0e6d3; color:#8b5e3c;' : '' ?>">
+                            <?= h(ucfirst($u['role'])) ?>
+                          </span>
+                        </td>
+                        <td>
+                          <?php if (!$isSelf): ?>
+                            <form method="POST" action="admin_dashboard.php#users" style="display:flex; gap:6px; align-items:center;">
+                              <input type="hidden" name="user_action" value="change_role">
+                              <input type="hidden" name="user_id" value="<?= (int)$u['user_id'] ?>">
+                              <select name="new_role" style="padding:5px 8px; border:1px solid #d9cfc2; border-radius:6px; font-size:13px;">
+                                <option value="customer" <?= !$isAdmin ? 'selected' : '' ?>>Customer</option>
+                                <option value="admin"    <?= $isAdmin  ? 'selected' : '' ?>>Admin</option>
+                              </select>
+                              <button type="submit" class="btn-table">Lưu</button>
+                            </form>
+                          <?php else: ?>
+                            <span style="font-size:12px; color:#aaa;">—</span>
+                          <?php endif; ?>
+                        </td>
+                        <td>
+                          <?php if (!$isSelf): ?>
+                            <form method="POST" action="admin_dashboard.php#users"
+                              onsubmit="return confirm('Xóa tài khoản <?= h(addslashes($u['user_name'])) ?>? Hành động này không thể hoàn tác.')">
+                              <input type="hidden" name="user_action" value="delete">
+                              <input type="hidden" name="user_id" value="<?= (int)$u['user_id'] ?>">
+                              <button type="submit" class="btn-table btn-danger">Xóa</button>
+                            </form>
+                          <?php else: ?>
+                            <span style="font-size:12px; color:#aaa;">—</span>
+                          <?php endif; ?>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <tr><td colspan="8" class="empty-row">Không tìm thấy thành viên nào.</td></tr>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Phân trang -->
+            <?php if ($userTotalPages > 1): ?>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:16px; align-items:center;">
+                <?php for ($i = 1; $i <= $userTotalPages; $i++): ?>
+                  <?php
+                    $uPageUrl = 'admin_dashboard.php?user_page=' . $i
+                      . ($userQ !== '' ? '&user_q=' . urlencode($userQ) : '')
+                      . ($userRoleFilter !== '' ? '&user_role=' . urlencode($userRoleFilter) : '')
+                      . '#users';
+                  ?>
+                  <a href="<?= $uPageUrl ?>" style="padding:6px 12px; border-radius:6px; border:1px solid #d9cfc2; text-decoration:none; font-size:13px;
+                    <?= $i === $userPage ? 'background:#1e4e36; color:#fff;' : 'color:#1e4e36;' ?>">
+                    <?= $i ?>
+                  </a>
+                <?php endfor; ?>
+              </div>
+            <?php endif; ?>
+          </div>
         </section>
 
       </div>

@@ -154,9 +154,11 @@ if ($currentPost) {
             rc.created_at,
             rc.review_id,
             rc.user_id,
-            u.user_name AS author_name
+            u.user_name AS author_name,
+            p.avatar_url
         FROM review_cmt rc
         JOIN user u ON rc.user_id = u.user_id
+        LEFT JOIN profile p ON rc.user_id = p.user_id
         WHERE rc.review_id = ?
           AND rc.status = 'approved'
         ORDER BY rc.created_at ASC, rc.review_cmt_id ASC
@@ -317,8 +319,18 @@ function formatReviewType($type) {
                     <?php if (!empty($comments)): ?>
                         <?php foreach ($comments as $comment): ?>
                             <article class="review-comment-card">
-                                <div class="review-comment-avatar">
-                                    <?php echo strtoupper(substr($comment['author_name'], 0, 1)); ?>
+                                <div class="review-comment-avatar" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                    <?php 
+                                        // Xác định đường dẫn ảnh: nếu có avatar_url thì dùng, không thì dùng ảnh mặc định
+                                        // Lưu ý: Đường dẫn có thể cần điều chỉnh là '../uploads/avatar/default.jpg' tùy vào cấu trúc thư mục của bạn
+                                        $avatarSrc = !empty($comment['avatar_url']) ? $comment['avatar_url'] : '../uploads/avatar/default.jpg';
+                                    ?>
+                                    <img 
+                                        src="<?php echo htmlspecialchars($avatarSrc); ?>" 
+                                        alt="Avatar" 
+                                        style="width: 100%; height: 100%; object-fit: cover;"
+                                        onerror="this.onerror=null; this.src='../uploads/avatar/default.jpg';"
+                                    >
                                 </div>
 
                                 <div class="review-comment-body">

@@ -64,6 +64,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['field'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_avatar') {
+    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+        
+        $fileTmpPath = $_FILES['avatar']['tmp_name'];
+        $fileName = $_FILES['avatar']['name'];
+        $fileSize = $_FILES['avatar']['size'];
+        $fileType = $_FILES['avatar']['type'];
+        
+        // Kiểm tra định dạng file
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        
+        if (in_array($fileExtension, $allowedExtensions)) {
+            // Giới hạn dung lượng (VD: 2MB)
+            if ($fileSize < 2 * 1024 * 1024) {
+                
+                // Tạo thư mục nếu chưa có
+                $uploadDir = '../uploads/avatar/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                
+                // Tạo tên file duy nhất để tránh trùng lặp
+                $newFileName = 'avatar_' . $_SESSION['user_id'] . '_' . time() . '.' . $fileExtension;
+                $destPath = $uploadDir . $newFileName;
+                
+                if (move_uploaded_file($fileTmpPath, $destPath)) {
+                    // 1. Cập nhật đường dẫn vào Database
+                    // Giả sử bạn dùng biến $conn từ config
+                    $sql = "UPDATE `profile` SET `avatar_url` = ? WHERE user_id = ?";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("si", $destPath, $_SESSION['user_id']);
+                    
+                    if ($stmt->execute()) {
+                        $userMessage = "Cập nhật ảnh đại diện thành công!";
+                        $userMessageType = "success";
+                        // Cập nhật lại biến hiển thị ngay lập tức
+                        $userProfile['avatar_url'] = $destPath;
+                    } else {
+                        $userMessage = "Lỗi database: Không thể lưu đường dẫn ảnh.";
+                        $userMessageType = "error";
+                    }
+                } else {
+                    $userMessage = "Lỗi khi di chuyển file vào thư mục lưu trữ.";
+                    $userMessageType = "error";
+                }
+            } else {
+                $userMessage = "File quá lớn. Vui lòng chọn ảnh dưới 2MB.";
+                $userMessageType = "error";
+            }
+        } else {
+            $userMessage = "Định dạng file không được hỗ trợ (Chỉ nhận JPG, PNG, WEBP).";
+            $userMessageType = "error";
+        }
+    } else {
+        $userMessage = "Vui lòng chọn một file ảnh hợp lệ.";
+        $userMessageType = "error";
+    }
+}
+
 // --- XỬ LÝ ĐỔI MẬT KHẨU ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {
     $currentPwd = $_POST['current_password'] ?? '';

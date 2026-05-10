@@ -30,16 +30,24 @@ require_once 'includes/user_logic.php';
 
         <section class="profile-grid">
             <div class="profile-sidebar">
-                <div class="avatar-container">
-                    <img 
-                        src="<?= h($userProfile['avatar_url'] ? $userProfile['avatar_url'] : '../uploads/avatar/default.jpg') ?>" 
-                        alt="User Avatar" 
-                        class="profile-avatar"
-                    >
-                    <button class="edit-avatar-btn" title="Change Image">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                    </button>
-                </div>
+                <form action="" method="POST" enctype="multipart/form-data" id="avatar-form">
+                    <input type="hidden" name="action" value="update_avatar">
+                    <div class="avatar-container">
+                        <img 
+                            src="<?= h($userProfile['avatar_url'] ? $userProfile['avatar_url'] : '../uploads/avatar/default.jpg') ?>" 
+                            alt="User Avatar" 
+                            class="profile-avatar"
+                            id="avatar-preview"
+                        >
+                        <input type="file" name="avatar" id="avatar-input" style="display: none;" accept="image/*" onchange="previewAndSubmitAvatar()">
+                        
+                        <button type="button" class="edit-avatar-btn" title="Change Image" onclick="document.getElementById('avatar-input').click();">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <p id="avatar-status" style="font-size: 12px; margin-top: 5px; color: var(--color-primary); display:none;">Đang tải ảnh...</p>
+                </form>
                 <h2 class="user-display-name"><?= h($userProfile['name']) ?></h2>
                 <p class="user-role section-content">Atelier Member since <?= h((string)$userProfile['member_since']) ?></p>
             </div>
@@ -247,6 +255,25 @@ require_once 'includes/user_logic.php';
         container.style.display = 'block';
     } else {
         container.style.display = 'none';
+    }
+}
+    function previewAndSubmitAvatar() {
+    const input = document.getElementById('avatar-input');
+    const preview = document.getElementById('avatar-preview');
+    const status = document.getElementById('avatar-status');
+    const form = document.getElementById('avatar-form');
+
+    if (input.files && input.files[0]) {
+        // Hiển thị xem trước ảnh (tùy chọn)
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+        
+        // Tự động submit form khi chọn ảnh xong
+        status.style.display = 'block';
+        form.submit();
     }
 }
 </script>
