@@ -1,14 +1,13 @@
 <?php 
-// 1. Kết nối cơ sở dữ liệu và lấy dữ liệu 6 sản phẩm tồn kho cao nhất
-require_once '../task1/config_m1.php'; // Đảm bảo đường dẫn tới file kết nối đúng[cite: 4]
+require_once '../task1/config_m1.php';
 
 try {
-    // Truy vấn lấy 6 sản phẩm có stock_quantity lớn nhất
     $stmt = $pdo->query("SELECT * FROM Product ORDER BY stock_quantity DESC LIMIT 6");
     $featuredProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $featuredProducts = []; // Nếu lỗi thì mảng rỗng để không crash trang
+    $featuredProducts = [];
 }
+
 include '../php/header.php'; ?>
 <section class="hero-showcase">
           <div class="hero-showcase-background">
@@ -68,16 +67,20 @@ include '../php/header.php'; ?>
                 <?php foreach ($featuredProducts as $product): ?>
                   <div class="product-card">
                     <div class="product-card-media">
-                      <img
-                          src="<?php echo htmlspecialchars('/btl_ltw/' . ($product['url'] ? $product['url'] : 'uploads/products/default.jpg')); ?>"
+                      <img 
+                          src="<?php 
+                              $rawUrl = !empty($product['url']) ? $product['url'] : '../uploads/products/default.jpg';
+
+                              $cleanUrl = str_replace('../', '', $rawUrl);
+
+                              echo htmlspecialchars('/btl_ltw/' . $cleanUrl); 
+                          ?>" 
                           alt="<?php echo htmlspecialchars($product['product_name']); ?>"
                       />
                     </div>
                     <div class="product-card-info">
                       <h3 class="product-card-name"><?php echo htmlspecialchars($product['product_name']); ?></h3>
-                      <!-- Định dạng giá tiền chuyên nghiệp[cite: 3] -->
                       <p class="product-card-price">$<?php echo number_format($product['price'], 2); ?></p>
-                      <!-- Hiển thị số lượng tồn kho (Tùy chọn nếu bạn muốn khoe hàng nhiều) -->
                       <p style="font-size: 11px; color: #888;">Stock: <?php echo $product['stock_quantity']; ?></p>
                       
                       <a href="../task3/product-detail.php?id=<?php echo $product['product_id']; ?>" class="product-card-btn btn btn-outline btn-sm">

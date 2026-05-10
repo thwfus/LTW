@@ -1,6 +1,7 @@
 <?php
 session_start();
-
+require_once '../task1/config_m1.php';
+require_once 'includes/user_logic.php';
 // KIỂM TRA ĐĂNG NHẬP
 if (!isset($_SESSION['user_id'])) {
     // Nếu chưa đăng nhập -> Chuyển hướng về trang login
@@ -8,8 +9,19 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-require_once '../task1/config_m1.php';
-require_once 'includes/user_logic.php';
+$customerId = (int)$_SESSION['user_id'];
+
+// TRUY VẤN LẤY LỊCH SỬ ĐƠN HÀNG
+try {
+    // Lấy tất cả đơn hàng của khách hàng hiện tại, sắp xếp mới nhất lên đầu
+    $stmtOrders = $pdo->prepare("SELECT * FROM orders WHERE cus_id = ? ORDER BY order_date DESC");
+    $stmtOrders->execute([$customerId]);
+    $userOrders = $stmtOrders->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $userOrders = []; // Nếu lỗi thì trả về mảng rỗng
+}
+
+
 ?>
 <?php include '../php/header.php'; ?>
 <link rel="stylesheet" href="../css/user.css" />
@@ -165,64 +177,38 @@ require_once 'includes/user_logic.php';
                 <h2 class="section-subtitle">Purchase History</h2>
 
                 <div class="order-list">
-                    <div class="order-card">
-                        <div class="order-header">
-                            <span class="order-id">Order #OA-2026-001</span>
-                            <span class="order-status delivered">Delivered</span>
-                        </div>
-                        <div class="order-body">
-                            <div class="order-products">
-                                <div class="product-item-summary">
-                                    <span class="product-name">Olivewood Dining Chair</span>
-                                    <span class="product-qty">x 2</span>
+                    <?php if (!empty($userOrders)): ?>
+                        <?php foreach ($userOrders as $order): ?>
+                            <div class="order-card">
+                                <div class="order-header">
+                                    <span class="order-id">Order #OA-<?= h((string)$order['order_id']) ?></span>
+                                    <?php 
+                                        $statusClass = ($order['status'] === 'Đã xác nhận') ? 'delivered' : 'processing';
+                                    ?>
+                                    <span class="order-status <?= $statusClass ?>">
+                                        <?= h($order['status']) ?>
+                                    </span>
                                 </div>
-                                <div class="product-item-summary">
-                                    <span class="product-name">Minimalist Oak Table</span>
-                                    <span class="product-qty">x 1</span>
+                                <div class="order-body">
+                                    <div class="order-shipping-info">
+                                        <p class="info-label">Order Details</p>
+                                        <p class="section-content"><strong>Date:</strong> <?= date('d/m/Y H:i', strtotime($order['order_date'])) ?></p>
+                                        <p class="section-content"><strong>Shipping Fee:</strong> $<?= number_format($order['shipping_fee'], 2) ?></p>
+                                        <p class="section-content"><strong>Address ID:</strong> <?= $order['address_id'] ? $order['address_id'] : 'Default' ?></p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="order-shipping-info">
-                                <p class="info-label">Shipping Details</p>
-                                <p class="section-content"><strong>Recipient:</strong> <?= h($userProfile['name']) ?></p>
-                                <p class="section-content"><strong>Phone:</strong> <?= h($userProfile['phone']) ?></p>
-                                <p class="section-content"><strong>Address:</strong> <?= h($userProfile['address']) ?></p>
-                            </div>
-                        </div>
-                        <div class="order-footer">
-                            <div class="order-total">
-                                <span class="total-label">Total Amount</span>
-                                <span class="total-price">$4,100.00</span>
-                            </div>
-                            <button class="btn btn-outline btn-sm">View Invoice</button>
-                        </div>
-                    </div>
-
-                    <div class="order-card">
-                        <div class="order-header">
-                            <span class="order-id">Order #OA-2026-042</span>
-                            <span class="order-status processing">Processing</span>
-                        </div>
-                        <div class="order-body">
-                            <div class="order-products">
-                                <div class="product-item-summary">
-                                    <span class="product-name">Velvet Lounge Armchair</span>
-                                    <span class="product-qty">x 1</span>
+                                <div class="order-footer">
+                                    <div class="order-total">
+                                        <span class="total-label">Total Amount</span>
+                                        <span class="total-price">$<?= number_format($order['total_amount'], 2) ?></span>
+                                    </div>
+                                    <button class="btn btn-outline btn-sm">View Details</button>
                                 </div>
                             </div>
-                            <div class="order-shipping-info">
-                                <p class="info-label">Shipping Details</p>
-                                <p class="section-content"><strong>Phone:</strong> <?= h($userProfile['phone']) ?></p>
-                                <p class="section-content"><strong>Address:</strong> <?= h($userProfile['address']) ?></p>
-                            </div>
-                        </div>
-                        <div class="order-footer">
-                            <div class="order-total">
-                                <span class="total-label">Total Amount</span>
-                                <span class="total-price">$1,250.00</span>
-                            </div>
-                            <button class="btn btn-outline btn-sm">Track Order</button>
-                        </div>
-                    </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p class="section-content" style="text-align: center; padding: 20px;">You haven't placed any orders yet.</p>
+                    <?php endif; ?>
                 </div>
             </section>
 

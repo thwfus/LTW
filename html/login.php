@@ -51,9 +51,12 @@
                     </div>
                     
                     <div class="input-group">
-                        <div class="label-row">
+                        <div class="label-row" style="display: flex; justify-content: space-between; align-items: center;">
                             <label class="section-content">Password</label>
-                            <a href="#" class="footer-link">Forgot?</a>
+                            <div class="remember-me-container">
+                                <input type="checkbox" id="remember" name="remember" class="remember-checkbox">
+                                <label for="remember" class="remember-label">Remember me</label>
+                            </div>
                         </div>
                         <input type="password" name="password" placeholder="••••••••" class="login-input" required />
                     </div>
