@@ -20,7 +20,8 @@ $conn->set_charset("utf8mb4");
     Nếu hệ thống login của bạn đã có session user_id thì nó sẽ lấy session.
     Nếu chưa có login, tạm dùng user_id = 11 để test.
 */
-$currentUserId = $_SESSION['user_id'] ?? 11;
+$isLoggedIn = isset($_SESSION['user_id']);
+$currentUserId = $isLoggedIn ? (int)$_SESSION['user_id'] : null;
 
 $reviewId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $currentPost = null;
@@ -34,6 +35,11 @@ $commentSuccess = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["comment_content"])) {
     $commentContent = trim($_POST["comment_content"] ?? "");
     $postedReviewId = (int)($_POST["review_id"] ?? 0);
+
+    if (!$isLoggedIn) {
+        header("Location: ../html/login.php?error=login_required");
+        exit;
+    }
 
     if ($postedReviewId <= 0) {
         $commentErrors[] = "Invalid review.";
@@ -286,30 +292,39 @@ function formatReviewType($type) {
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" class="review-comment-form">
-                    <input 
-                        type="hidden" 
-                        name="review_id" 
-                        value="<?php echo (int)$currentPost['review_id']; ?>"
-                    >
+                <?php if ($isLoggedIn): ?>
+                    <form method="POST" class="review-comment-form">
+                        <input 
+                            type="hidden" 
+                            name="review_id" 
+                            value="<?php echo (int)$currentPost['review_id']; ?>"
+                        >
 
-                    <div class="review-comment-field">
-                        <label for="comment_content">Write a Comment</label>
-                        <textarea 
-                            id="comment_content" 
-                            name="comment_content" 
-                            rows="5" 
-                            placeholder="Write your comment here..."
-                            required
-                        ></textarea>
-                    </div>
+                        <div class="review-comment-field">
+                            <label for="comment_content">Write a Comment</label>
+                            <textarea 
+                                id="comment_content" 
+                                name="comment_content" 
+                                rows="5" 
+                                placeholder="Write your comment here..."
+                                required
+                            ></textarea>
+                        </div>
 
-                    <div class="review-comment-actions">
-                        <button type="submit" class="submit-comment-btn">
-                            Post Comment
-                        </button>
+                        <div class="review-comment-actions">
+                            <button type="submit" class="submit-comment-btn">
+                                Post Comment
+                            </button>
+                        </div>
+                    </form>
+                <?php else: ?>
+                    <div class="review-comment-notice error">
+                        <p>Bạn cần đăng nhập để bình luận bài viết này.</p>
+                        <a href="../html/login.php" class="submit-comment-btn" style="display:inline-flex; text-decoration:none; margin-top:10px;">
+                            Đăng nhập ngay
+                        </a>
                     </div>
-                </form>
+                <?php endif; ?>
 
                 <div class="comments-list">
                     <?php if (!empty($comments)): ?>

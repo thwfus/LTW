@@ -1,4 +1,17 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+/*
+    Nếu chưa đăng nhập thì chuyển sang trang login.
+    redirect giúp sau này có thể quay lại trang đăng bài nếu bạn xử lý trong login.
+*/
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../html/login.php?error=login_required&redirect=" . urlencode($_SERVER['REQUEST_URI']));
+    exit;
+}
+
 include '../php/header.php';
 
 /*
@@ -18,11 +31,7 @@ $conn->set_charset("utf8mb4");
     Nếu hệ thống login của bạn đã lưu session user_id thì dùng session.
     Nếu chưa làm login hoàn chỉnh, tạm dùng customer id = 11 để test.
 */
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$currentUserId = $_SESSION['user_id'] ?? 11;
+$currentUserId = (int)$_SESSION['user_id'];
 
 $errors = [];
 $successMessage = "";
@@ -50,6 +59,13 @@ if ($productResult) {
     Xử lý submit form
 */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ../html/login.php?error=login_required&redirect=" . urlencode($_SERVER['REQUEST_URI']));
+        exit;
+    }
+
+    $currentUserId = (int)$_SESSION['user_id'];
+
     $title = trim($_POST["title"] ?? "");
     $reviewType = trim($_POST["review_type"] ?? "");
     $content = trim($_POST["content"] ?? "");
