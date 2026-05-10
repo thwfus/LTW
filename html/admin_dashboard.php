@@ -21,43 +21,8 @@
 }
   $qaMessage = "";
 
-  // --- LOGIC XỬ LÝ DỮ LIỆU CỦA HUY (Giữ nguyên) ---
-  // $notice = "";
 
-  // // Cập nhật thông tin Website Info
-  // if (isset($_POST['update_profile'])) {
-  //     $sql = "UPDATE Web_Info SET phone = ?, mail = ?, address = ? WHERE info_id = 1";
-  //     $pdo->prepare($sql)->execute([$_POST['phone'], $_POST['mail'], $_POST['address']]);
-  //     $notice = "Đã cập nhật thông tin Website thành công!";
-  // }
-
-  // // Xử lý trạng thái tin nhắn Liên hệ (Đọc/Xóa)
-  // if (isset($_GET['action']) && isset($_GET['msg_id'])) {
-  //     $id = (int)$_GET['msg_id'];
-  //     if ($_GET['action'] == 'mark_read') {
-  //         $pdo->prepare("UPDATE Contact_Messages SET status = 'Đã đọc' WHERE message_id = ?")->execute([$id]);
-  //     } elseif ($_GET['action'] == 'delete') {
-  //         $pdo->prepare("DELETE FROM Contact_Messages WHERE message_id = ?")->execute([$id]);
-  //     }
-  //     header("Location: admin_dashboard.php#contacts");
-  //     exit();
-  // }
-
-  
-
-  // // 3. LẤY DỮ LIỆU HIỂN THỊ
-  // $company = $pdo->query("SELECT * FROM Web_Info WHERE info_id = 1")->fetch();
-  // $messages = $pdo->query("SELECT * FROM Contact_Messages ORDER BY created_at DESC")->fetchAll();
-  // $unreadCount = count(array_filter($messages, fn($m) => $m['status'] == 'Chưa đọc'));
-
-
-
-  // // Giả lập số liệu cho phần Stats (Sau này Huy thay bằng Query COUNT thực tế)
-  // $totalProducts = 128; 
-  // $totalOrders = 24;
-
-
-    // --- LOGIC XỬ LÝ DỮ LIỆU CỦA HUY ---
+  // --- LOGIC XỬ LÝ DỮ LIỆU CỦA HUY ---
   $notice = $_SESSION['admin_notice'] ?? "";
   unset($_SESSION['admin_notice']);
 
@@ -94,171 +59,168 @@
       exit();
   }
 
+  // =================PHÚ==============
+  // XỬ LÝ THÊM / SỬA / DUYỆT / GỠ DUYỆT / XÓA BÀI REVIEW
   // ===============================
-  // XỬ LÝ DUYỆT / GỠ DUYỆT / XÓA BÀI REVIEW
-  // ===============================
-  // ===============================
-// XỬ LÝ THÊM / SỬA / DUYỆT / GỠ DUYỆT / XÓA BÀI REVIEW
-// ===============================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_action'])) {
-    $action = $_POST['review_action'];
-    $adminId = (int)$_SESSION['user_id'];
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_action'])) {
+      $action = $_POST['review_action'];
+      $adminId = (int)$_SESSION['user_id'];
 
-    // Kiểm tra adminId có tồn tại trong bảng admin không để tránh lỗi khóa ngoại
-    $checkAdmin = $pdo->prepare("
-        SELECT user_id 
-        FROM admin 
-        WHERE user_id = ? 
-        LIMIT 1
-    ");
-    $checkAdmin->execute([$adminId]);
-    $validAdminId = $checkAdmin->fetchColumn() ? $adminId : null;
+      // Kiểm tra adminId có tồn tại trong bảng admin không để tránh lỗi khóa ngoại
+      $checkAdmin = $pdo->prepare("
+          SELECT user_id 
+          FROM admin 
+          WHERE user_id = ? 
+          LIMIT 1
+      ");
+      $checkAdmin->execute([$adminId]);
+      $validAdminId = $checkAdmin->fetchColumn() ? $adminId : null;
 
-    $title = trim($_POST['title'] ?? '');
-    $content = trim($_POST['content'] ?? '');
-    $image = trim($_POST['image'] ?? '');
-    $reviewType = trim($_POST['review_type'] ?? 'website');
-    $adminNote = trim($_POST['admin_note'] ?? '');
+      $title = trim($_POST['title'] ?? '');
+      $content = trim($_POST['content'] ?? '');
+      $image = trim($_POST['image'] ?? '');
+      $reviewType = trim($_POST['review_type'] ?? 'website');
+      $adminNote = trim($_POST['admin_note'] ?? '');
 
-    $status = $_POST['status'] ?? 'pending';
-    if (!in_array($status, ['pending', 'approved'])) {
-        $status = 'pending';
-    }
+      $status = $_POST['status'] ?? 'pending';
+      if (!in_array($status, ['pending', 'approved'])) {
+          $status = 'pending';
+      }
 
-    $productIdRaw = trim($_POST['product_id'] ?? '');
-    $productId = ($productIdRaw === '') ? null : (int)$productIdRaw;
+      $productIdRaw = trim($_POST['product_id'] ?? '');
+      $productId = ($productIdRaw === '') ? null : (int)$productIdRaw;
 
-    // Admin thêm bài review mới
-    if ($action === 'add') {
-        if ($title === '' || $content === '') {
-            $_SESSION['admin_notice'] = "Vui lòng nhập tiêu đề và nội dung bài review.";
-            header("Location: admin_dashboard.php#reviews");
-            exit();
-        }
+      // Admin thêm bài review mới
+      if ($action === 'add') {
+          if ($title === '' || $content === '') {
+              $_SESSION['admin_notice'] = "Vui lòng nhập tiêu đề và nội dung bài review.";
+              header("Location: admin_dashboard.php#reviews");
+              exit();
+          }
 
-        $stmt = $pdo->prepare("
-    INSERT INTO review_post
-        (title, content, image, status, review_type, admin_note, created_at, user_id, product_id, admin_id)
-    VALUES
-        (?, ?, ?, ?, ?, ?, NOW(), NULL, ?, ?)
-");
+          $stmt = $pdo->prepare("
+      INSERT INTO review_post
+          (title, content, image, status, review_type, admin_note, created_at, user_id, product_id, admin_id)
+      VALUES
+          (?, ?, ?, ?, ?, ?, NOW(), NULL, ?, ?)
+  ");
 
-$stmt->execute([
-    $title,
-    $content,
-    $image,
-    $status,
-    $reviewType,
-    $adminNote,
-    $productId,
-    $validAdminId
-]);
+  $stmt->execute([
+      $title,
+      $content,
+      $image,
+      $status,
+      $reviewType,
+      $adminNote,
+      $productId,
+      $validAdminId
+  ]);
 
-        $_SESSION['admin_notice'] = "Đã thêm bài review mới.";
-        header("Location: admin_dashboard.php#reviews");
-        exit();
-    }
+          $_SESSION['admin_notice'] = "Đã thêm bài review mới.";
+          header("Location: admin_dashboard.php#reviews");
+          exit();
+      }
 
-    // Admin sửa bài review
-    if ($action === 'edit' && isset($_POST['review_id'])) {
-        $reviewId = (int)$_POST['review_id'];
+      // Admin sửa bài review
+      if ($action === 'edit' && isset($_POST['review_id'])) {
+          $reviewId = (int)$_POST['review_id'];
 
-        if ($title === '' || $content === '') {
-            $_SESSION['admin_notice'] = "Vui lòng nhập tiêu đề và nội dung bài review.";
-            header("Location: admin_dashboard.php#reviews");
-            exit();
-        }
+          if ($title === '' || $content === '') {
+              $_SESSION['admin_notice'] = "Vui lòng nhập tiêu đề và nội dung bài review.";
+              header("Location: admin_dashboard.php#reviews");
+              exit();
+          }
 
-        $stmt = $pdo->prepare("
-            UPDATE review_post
-            SET title = ?,
-                content = ?,
-                image = ?,
-                status = ?,
-                review_type = ?,
-                admin_note = ?,
-                product_id = ?,
-                admin_id = ?
-            WHERE review_id = ?
-        ");
+          $stmt = $pdo->prepare("
+              UPDATE review_post
+              SET title = ?,
+                  content = ?,
+                  image = ?,
+                  status = ?,
+                  review_type = ?,
+                  admin_note = ?,
+                  product_id = ?,
+                  admin_id = ?
+              WHERE review_id = ?
+          ");
 
-        $stmt->execute([
-            $title,
-            $content,
-            $image,
-            $status,
-            $reviewType,
-            $adminNote,
-            $productId,
-            $validAdminId,
-            $reviewId
-        ]);
+          $stmt->execute([
+              $title,
+              $content,
+              $image,
+              $status,
+              $reviewType,
+              $adminNote,
+              $productId,
+              $validAdminId,
+              $reviewId
+          ]);
 
-        $_SESSION['admin_notice'] = "Đã cập nhật bài review.";
-        header("Location: admin_dashboard.php#reviews");
-        exit();
-    }
+          $_SESSION['admin_notice'] = "Đã cập nhật bài review.";
+          header("Location: admin_dashboard.php#reviews");
+          exit();
+      }
 
-    // Duyệt bài
-    if ($action === 'approve' && isset($_POST['review_id'])) {
-        $reviewId = (int)$_POST['review_id'];
+      // Duyệt bài
+      if ($action === 'approve' && isset($_POST['review_id'])) {
+          $reviewId = (int)$_POST['review_id'];
 
-        $stmt = $pdo->prepare("
-            UPDATE review_post
-            SET status = 'approved',
-                admin_note = ?,
-                admin_id = ?
-            WHERE review_id = ?
-        ");
+          $stmt = $pdo->prepare("
+              UPDATE review_post
+              SET status = 'approved',
+                  admin_note = ?,
+                  admin_id = ?
+              WHERE review_id = ?
+          ");
 
-        $stmt->execute([
-            $adminNote !== '' ? $adminNote : 'Approved by admin.',
-            $validAdminId,
-            $reviewId
-        ]);
+          $stmt->execute([
+              $adminNote !== '' ? $adminNote : 'Approved by admin.',
+              $validAdminId,
+              $reviewId
+          ]);
 
-        $_SESSION['admin_notice'] = "Đã duyệt bài review.";
-        header("Location: admin_dashboard.php#reviews");
-        exit();
-    }
+          $_SESSION['admin_notice'] = "Đã duyệt bài review.";
+          header("Location: admin_dashboard.php#reviews");
+          exit();
+      }
 
-    // Gỡ duyệt bài
-    if ($action === 'pending' && isset($_POST['review_id'])) {
-        $reviewId = (int)$_POST['review_id'];
+      // Gỡ duyệt bài
+      if ($action === 'pending' && isset($_POST['review_id'])) {
+          $reviewId = (int)$_POST['review_id'];
 
-        $stmt = $pdo->prepare("
-            UPDATE review_post
-            SET status = 'pending',
-                admin_note = ?,
-                admin_id = ?
-            WHERE review_id = ?
-        ");
+          $stmt = $pdo->prepare("
+              UPDATE review_post
+              SET status = 'pending',
+                  admin_note = ?,
+                  admin_id = ?
+              WHERE review_id = ?
+          ");
 
-        $stmt->execute([
-            $adminNote !== '' ? $adminNote : 'Moved back to pending.',
-            $validAdminId,
-            $reviewId
-        ]);
+          $stmt->execute([
+              $adminNote !== '' ? $adminNote : 'Moved back to pending.',
+              $validAdminId,
+              $reviewId
+          ]);
 
-        $_SESSION['admin_notice'] = "Đã gỡ duyệt bài review.";
-        header("Location: admin_dashboard.php#reviews");
-        exit();
-    }
+          $_SESSION['admin_notice'] = "Đã gỡ duyệt bài review.";
+          header("Location: admin_dashboard.php#reviews");
+          exit();
+      }
 
-    // Xóa bài
-    if ($action === 'delete' && isset($_POST['review_id'])) {
-        $reviewId = (int)$_POST['review_id'];
+      // Xóa bài
+      if ($action === 'delete' && isset($_POST['review_id'])) {
+          $reviewId = (int)$_POST['review_id'];
 
-        $pdo->prepare("DELETE FROM review_cmt WHERE review_id = ?")->execute([$reviewId]);
-        $pdo->prepare("DELETE FROM review_post WHERE review_id = ?")->execute([$reviewId]);
+          $pdo->prepare("DELETE FROM review_cmt WHERE review_id = ?")->execute([$reviewId]);
+          $pdo->prepare("DELETE FROM review_post WHERE review_id = ?")->execute([$reviewId]);
 
-        $_SESSION['admin_notice'] = "Đã xóa bài review.";
-        header("Location: admin_dashboard.php#reviews");
-        exit();
-    }
-}
+          $_SESSION['admin_notice'] = "Đã xóa bài review.";
+          header("Location: admin_dashboard.php#reviews");
+          exit();
+      }
+  }
 
-  // ===============================
+  // =================PHÚ============
   // XỬ LÝ DUYỆT / ẨN / XÓA BÌNH LUẬN REVIEW
   // ===============================
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_action'], $_POST['review_cmt_id'])) {
@@ -319,6 +281,8 @@ $stmt->execute([
       header("Location: admin_dashboard.php#reviews");
       exit();
   }
+
+  // HẾT PHÚ
 
   // ===============================
   // XỬ LÝ QUẢN LÝ SẢN PHẨM
@@ -649,63 +613,63 @@ $stmt->execute([
 
   // $totalProducts và $totalOrders được lấy từ DB thực ở các section logic bên trên
 
-  // Lấy danh sách bài review
+  // Lấy danh sách bài review PHÚ
   // Lấy danh sách bài review, có tìm kiếm
-$reviewKeyword = trim($_GET['review_keyword'] ?? '');
-$reviewStatus = trim($_GET['review_status'] ?? '');
+  $reviewKeyword = trim($_GET['review_keyword'] ?? '');
+  $reviewStatus = trim($_GET['review_status'] ?? '');
 
-$whereReview = [];
-$paramsReview = [];
+  $whereReview = [];
+  $paramsReview = [];
 
-if ($reviewKeyword !== '') {
-    $whereReview[] = "
-        (
-            rp.title LIKE ?
-            OR rp.content LIKE ?
-            OR rp.review_type LIKE ?
-            OR rp.admin_note LIKE ?
-        )
-    ";
+  if ($reviewKeyword !== '') {
+      $whereReview[] = "
+          (
+              rp.title LIKE ?
+              OR rp.content LIKE ?
+              OR rp.review_type LIKE ?
+              OR rp.admin_note LIKE ?
+          )
+      ";
 
-    $likeKeyword = '%' . $reviewKeyword . '%';
-    $paramsReview[] = $likeKeyword;
-    $paramsReview[] = $likeKeyword;
-    $paramsReview[] = $likeKeyword;
-    $paramsReview[] = $likeKeyword;
-}
+      $likeKeyword = '%' . $reviewKeyword . '%';
+      $paramsReview[] = $likeKeyword;
+      $paramsReview[] = $likeKeyword;
+      $paramsReview[] = $likeKeyword;
+      $paramsReview[] = $likeKeyword;
+  }
 
-if (in_array($reviewStatus, ['pending', 'approved'])) {
-    $whereReview[] = "rp.status = ?";
-    $paramsReview[] = $reviewStatus;
-}
+  if (in_array($reviewStatus, ['pending', 'approved'])) {
+      $whereReview[] = "rp.status = ?";
+      $paramsReview[] = $reviewStatus;
+  }
 
-$whereReviewSql = "";
-if (!empty($whereReview)) {
-    $whereReviewSql = "WHERE " . implode(" AND ", $whereReview);
-}
+  $whereReviewSql = "";
+  if (!empty($whereReview)) {
+      $whereReviewSql = "WHERE " . implode(" AND ", $whereReview);
+  }
 
-$stmtReviews = $pdo->prepare("
-    SELECT 
-        rp.*,
-        u.user_name,
-        COALESCE(cmt.total_comments, 0) AS total_comments
-    FROM review_post rp
-    LEFT JOIN `User` u ON u.user_id = rp.user_id
-    LEFT JOIN (
-        SELECT review_id, COUNT(*) AS total_comments
-        FROM review_cmt
-        GROUP BY review_id
-    ) cmt ON cmt.review_id = rp.review_id
-    $whereReviewSql
-    ORDER BY 
-        FIELD(rp.status, 'pending', 'approved'),
-        rp.created_at DESC
-");
+  $stmtReviews = $pdo->prepare("
+      SELECT 
+          rp.*,
+          u.user_name,
+          COALESCE(cmt.total_comments, 0) AS total_comments
+      FROM review_post rp
+      LEFT JOIN `User` u ON u.user_id = rp.user_id
+      LEFT JOIN (
+          SELECT review_id, COUNT(*) AS total_comments
+          FROM review_cmt
+          GROUP BY review_id
+      ) cmt ON cmt.review_id = rp.review_id
+      $whereReviewSql
+      ORDER BY 
+          FIELD(rp.status, 'pending', 'approved'),
+          rp.created_at DESC
+  ");
 
-$stmtReviews->execute($paramsReview);
-$reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
+  $stmtReviews->execute($paramsReview);
+  $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
 
-  // Lấy danh sách bình luận review
+  // Lấy danh sách bình luận review PHÚ
   $reviewComments = $pdo->query("
       SELECT 
           rc.*,
@@ -721,6 +685,8 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
 
   $pendingReviewCount = count(array_filter($reviews, fn($r) => $r['status'] === 'pending'));
   $pendingCommentCount = count(array_filter($reviewComments, fn($c) => $c['status'] === 'pending'));
+
+// HẾT PHÚ
 
   // ===============================
   // QUẢN LÝ TRANG ABOUT
@@ -1026,6 +992,7 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </section>
 
+        <!-- PHÚ -->
         <section id="reviews" class="admin-section">
           <div class="admin-card">
             <div class="card-header">
@@ -1033,127 +1000,127 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
               <p>Admin duyệt bài review trước khi bài được hiển thị ngoài trang người dùng.</p>
             </div>
             <div class="review-admin-toolbar">
-  <form method="GET" action="admin_dashboard.php#reviews" class="review-search-form">
-    <div class="review-search-left">
-      <label>Tìm kiếm bài review</label>
-      <input 
-        type="text" 
-        name="review_keyword" 
-        value="<?= h($reviewKeyword ?? ''); ?>" 
-        placeholder="Nhập tiêu đề, nội dung, loại review..."
-      >
-    </div>
+              <form method="GET" action="admin_dashboard.php#reviews" class="review-search-form">
+                <div class="review-search-left">
+                  <label>Tìm kiếm bài review</label>
+                  <input 
+                    type="text" 
+                    name="review_keyword" 
+                    value="<?= h($reviewKeyword ?? ''); ?>" 
+                    placeholder="Nhập tiêu đề, nội dung, loại review..."
+                  >
+                </div>
 
-    <div class="review-search-status">
-      <label>Trạng thái</label>
-      <select name="review_status">
-        <option value="">Tất cả</option>
-        <option value="pending" <?= ($reviewStatus ?? '') === 'pending' ? 'selected' : ''; ?>>
-          Chờ duyệt
-        </option>
-        <option value="approved" <?= ($reviewStatus ?? '') === 'approved' ? 'selected' : ''; ?>>
-          Đã duyệt
-        </option>
-      </select>
-    </div>
+                <div class="review-search-status">
+                  <label>Trạng thái</label>
+                  <select name="review_status">
+                    <option value="">Tất cả</option>
+                    <option value="pending" <?= ($reviewStatus ?? '') === 'pending' ? 'selected' : ''; ?>>
+                      Chờ duyệt
+                    </option>
+                    <option value="approved" <?= ($reviewStatus ?? '') === 'approved' ? 'selected' : ''; ?>>
+                      Đã duyệt
+                    </option>
+                  </select>
+                </div>
 
-    <div class="review-search-actions">
-      <button type="submit" class="review-btn review-btn-primary">
-        Tìm kiếm
-      </button>
+                <div class="review-search-actions">
+                  <button type="submit" class="review-btn review-btn-primary">
+                    Tìm kiếm
+                  </button>
 
-      <a href="admin_dashboard.php#reviews" class="review-btn review-btn-light">
-        Làm mới
-      </a>
-    </div>
-  </form>
-</div>
+                  <a href="admin_dashboard.php#reviews" class="review-btn review-btn-light">
+                    Làm mới
+                  </a>
+                </div>
+              </form>
+            </div>
 
-<details class="review-create-panel">
-  <summary>
-    <span class="review-plus-icon">+</span>
-    Thêm bài review mới
-  </summary>
+            <details class="review-create-panel">
+              <summary>
+                <span class="review-plus-icon">+</span>
+                Thêm bài review mới
+              </summary>
 
-  <div class="review-create-body">
-    <form method="POST" action="admin_dashboard.php#reviews">
-      <input type="hidden" name="review_action" value="add">
+              <div class="review-create-body">
+                <form method="POST" action="admin_dashboard.php#reviews">
+                  <input type="hidden" name="review_action" value="add">
 
-      <div class="review-create-grid">
-        <div class="review-form-group review-form-wide">
-          <label>Tiêu đề bài review</label>
-          <input 
-            type="text" 
-            name="title" 
-            placeholder="Ví dụ: Trải nghiệm mua bàn gỗ rất tốt" 
-            required
-          >
-        </div>
+                  <div class="review-create-grid">
+                    <div class="review-form-group review-form-wide">
+                      <label>Tiêu đề bài review</label>
+                      <input 
+                        type="text" 
+                        name="title" 
+                        placeholder="Ví dụ: Trải nghiệm mua bàn gỗ rất tốt" 
+                        required
+                      >
+                    </div>
 
-        <div class="review-form-group">
-          <label>Loại review</label>
-          <select name="review_type">
-            <option value="website">Website</option>
-            <option value="product">Sản phẩm</option>
-            <option value="service">Dịch vụ</option>
-            <option value="delivery">Giao hàng</option>
-          </select>
-        </div>
+                    <div class="review-form-group">
+                      <label>Loại review</label>
+                      <select name="review_type">
+                        <option value="website">Website</option>
+                        <option value="product">Sản phẩm</option>
+                        <option value="service">Dịch vụ</option>
+                        <option value="delivery">Giao hàng</option>
+                      </select>
+                    </div>
 
-        <div class="review-form-group">
-          <label>ID sản phẩm nếu có</label>
-          <input 
-            type="number" 
-            name="product_id" 
-            placeholder="Có thể bỏ trống"
-          >
-        </div>
+                    <div class="review-form-group">
+                      <label>ID sản phẩm nếu có</label>
+                      <input 
+                        type="number" 
+                        name="product_id" 
+                        placeholder="Có thể bỏ trống"
+                      >
+                    </div>
 
-        <div class="review-form-group">
-          <label>Trạng thái</label>
-          <select name="status">
-            <option value="approved">Đăng ngay</option>
-            <option value="pending">Lưu chờ duyệt</option>
-          </select>
-        </div>
+                    <div class="review-form-group">
+                      <label>Trạng thái</label>
+                      <select name="status">
+                        <option value="approved">Đăng ngay</option>
+                        <option value="pending">Lưu chờ duyệt</option>
+                      </select>
+                    </div>
 
-        <div class="review-form-group review-form-full">
-          <label>Ảnh bài review</label>
-          <input 
-            type="text" 
-            name="image" 
-            placeholder="Ví dụ: uploads/reviews/my-review.jpg"
-          >
-        </div>
+                    <div class="review-form-group review-form-full">
+                      <label>Ảnh bài review</label>
+                      <input 
+                        type="text" 
+                        name="image" 
+                        placeholder="Ví dụ: uploads/reviews/my-review.jpg"
+                      >
+                    </div>
 
-        <div class="review-form-group review-form-full">
-          <label>Nội dung bài review</label>
-          <textarea 
-            name="content" 
-            rows="6" 
-            placeholder="Nhập nội dung bài review..."
-            required
-          ></textarea>
-        </div>
+                    <div class="review-form-group review-form-full">
+                      <label>Nội dung bài review</label>
+                      <textarea 
+                        name="content" 
+                        rows="6" 
+                        placeholder="Nhập nội dung bài review..."
+                        required
+                      ></textarea>
+                    </div>
 
-        <div class="review-form-group review-form-full">
-          <label>Ghi chú admin</label>
-          <textarea 
-            name="admin_note" 
-            rows="2" 
-            placeholder="Ghi chú nội bộ nếu có..."
-          ></textarea>
-        </div>
-      </div>
+                    <div class="review-form-group review-form-full">
+                      <label>Ghi chú admin</label>
+                      <textarea 
+                        name="admin_note" 
+                        rows="2" 
+                        placeholder="Ghi chú nội bộ nếu có..."
+                      ></textarea>
+                    </div>
+                  </div>
 
-      <div class="review-create-actions">
-        <button type="submit" class="review-btn review-btn-primary">
-          Thêm bài review
-        </button>
-      </div>
-    </form>
-  </div>
-</details>
+                  <div class="review-create-actions">
+                    <button type="submit" class="review-btn review-btn-primary">
+                      Thêm bài review
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </details>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -1170,204 +1137,204 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
                 </thead>
 
                 <tbody>
-  <?php if (!empty($reviews)): ?>
-    <?php foreach ($reviews as $review): ?>
-      <tr>
-        <td>
-          <div class="review-main-title">
-            <?= h($review['title']); ?>
-          </div>
+                  <?php if (!empty($reviews)): ?>
+                    <?php foreach ($reviews as $review): ?>
+                      <tr>
+                        <td>
+                          <div class="review-main-title">
+                            <?= h($review['title']); ?>
+                          </div>
 
-          <div class="review-short-content">
-            <?= h(mb_substr($review['content'], 0, 120)); ?>
-            <?= mb_strlen($review['content']) > 120 ? '...' : ''; ?>
-          </div>
-        </td>
+                          <div class="review-short-content">
+                            <?= h(mb_substr($review['content'], 0, 120)); ?>
+                            <?= mb_strlen($review['content']) > 120 ? '...' : ''; ?>
+                          </div>
+                        </td>
 
-        <td>
-          <?= h($review['user_name'] ?? 'Admin đăng'); ?>
-        </td>
+                        <td>
+                          <?= h($review['user_name'] ?? 'Admin đăng'); ?>
+                        </td>
 
-        <td>
-          <?= h($review['review_type']); ?>
-        </td>
+                        <td>
+                          <?= h($review['review_type']); ?>
+                        </td>
 
-        <td>
-          <?= !empty($review['product_id']) ? '#' . (int)$review['product_id'] : 'Không có'; ?>
-        </td>
+                        <td>
+                          <?= !empty($review['product_id']) ? '#' . (int)$review['product_id'] : 'Không có'; ?>
+                        </td>
 
-        <td>
-          <?= (int)$review['total_comments']; ?>
-        </td>
+                        <td>
+                          <?= (int)$review['total_comments']; ?>
+                        </td>
 
-        <td>
-          <?= date('d/m/Y H:i', strtotime($review['created_at'])); ?>
-        </td>
+                        <td>
+                          <?= date('d/m/Y H:i', strtotime($review['created_at'])); ?>
+                        </td>
 
-        <td>
-          <?php if ($review['status'] === 'approved'): ?>
-            <span class="status-badge status-read">Đã duyệt</span>
-          <?php else: ?>
-            <span class="status-badge status-unread">Chờ duyệt</span>
-          <?php endif; ?>
-        </td>
+                        <td>
+                          <?php if ($review['status'] === 'approved'): ?>
+                            <span class="status-badge status-read">Đã duyệt</span>
+                          <?php else: ?>
+                            <span class="status-badge status-unread">Chờ duyệt</span>
+                          <?php endif; ?>
+                        </td>
 
-        <td class="review-actions-cell">
-          <form method="POST" action="admin_dashboard.php#reviews">
-            <input type="hidden" name="review_id" value="<?= (int)$review['review_id']; ?>">
-            <input type="hidden" name="admin_note" value="<?= h($review['admin_note'] ?? ''); ?>">
+                        <td class="review-actions-cell">
+                          <form method="POST" action="admin_dashboard.php#reviews">
+                            <input type="hidden" name="review_id" value="<?= (int)$review['review_id']; ?>">
+                            <input type="hidden" name="admin_note" value="<?= h($review['admin_note'] ?? ''); ?>">
 
-            <div class="review-inline-actions">
-              <?php if ($review['status'] !== 'approved'): ?>
-                <button type="submit" name="review_action" value="approve" class="review-btn review-btn-primary">
-                  Duyệt
-                </button>
-              <?php else: ?>
-                <button type="submit" name="review_action" value="pending" class="review-btn review-btn-light">
-                  Gỡ duyệt
-                </button>
-              <?php endif; ?>
+                            <div class="review-inline-actions">
+                              <?php if ($review['status'] !== 'approved'): ?>
+                                <button type="submit" name="review_action" value="approve" class="review-btn review-btn-primary">
+                                  Duyệt
+                                </button>
+                              <?php else: ?>
+                                <button type="submit" name="review_action" value="pending" class="review-btn review-btn-light">
+                                  Gỡ duyệt
+                                </button>
+                              <?php endif; ?>
 
-              <button 
-                type="submit" 
-                name="review_action" 
-                value="delete" 
-                class="review-btn review-btn-danger"
-                onclick="return confirm('Xóa bài review này?')"
-              >
-                Xóa
-              </button>
-            </div>
-          </form>
-        </td>
-      </tr>
+                              <button 
+                                type="submit" 
+                                name="review_action" 
+                                value="delete" 
+                                class="review-btn review-btn-danger"
+                                onclick="return confirm('Xóa bài review này?')"
+                              >
+                                Xóa
+                              </button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
 
-      <tr class="review-detail-row">
-        <td colspan="8">
-          <details class="review-detail-panel">
-  <summary>Đọc chi tiết / Sửa bài</summary>
+                      <tr class="review-detail-row">
+                        <td colspan="8">
+                          <details class="review-detail-panel">
+                  <summary>Đọc chi tiết / Sửa bài</summary>
 
-  <div class="review-detail-body">
+                  <div class="review-detail-body">
 
-    <div class="review-full-content-box">
-      <div class="review-full-content-title">
-        Nội dung đầy đủ
-      </div>
+                    <div class="review-full-content-box">
+                      <div class="review-full-content-title">
+                        Nội dung đầy đủ
+                      </div>
 
-      <div class="review-full-content-text">
-        <?= nl2br(h($review['content'])); ?>
-      </div>
+                      <div class="review-full-content-text">
+                        <?= nl2br(h($review['content'])); ?>
+                      </div>
 
-      <?php if (!empty($review['admin_note'])): ?>
-        <div class="review-admin-note">
-          <strong>Ghi chú admin:</strong>
-          <?= h($review['admin_note']); ?>
-        </div>
-      <?php endif; ?>
-    </div>
+                      <?php if (!empty($review['admin_note'])): ?>
+                        <div class="review-admin-note">
+                          <strong>Ghi chú admin:</strong>
+                          <?= h($review['admin_note']); ?>
+                        </div>
+                      <?php endif; ?>
+                    </div>
 
-    <div class="review-edit-card">
-      <div class="review-edit-title">
-        Sửa thông tin bài review
-      </div>
+                    <div class="review-edit-card">
+                      <div class="review-edit-title">
+                        Sửa thông tin bài review
+                      </div>
 
-      <form method="POST" action="admin_dashboard.php#reviews">
-        <input type="hidden" name="review_action" value="edit">
-        <input type="hidden" name="review_id" value="<?= (int)$review['review_id']; ?>">
+                      <form method="POST" action="admin_dashboard.php#reviews">
+                        <input type="hidden" name="review_action" value="edit">
+                        <input type="hidden" name="review_id" value="<?= (int)$review['review_id']; ?>">
 
-        <div class="review-edit-grid">
-          <div class="review-edit-group">
-            <label>Tiêu đề</label>
-            <input 
-              type="text" 
-              name="title" 
-              value="<?= h($review['title']); ?>" 
-              required
-            >
-          </div>
+                        <div class="review-edit-grid">
+                          <div class="review-edit-group">
+                            <label>Tiêu đề</label>
+                            <input 
+                              type="text" 
+                              name="title" 
+                              value="<?= h($review['title']); ?>" 
+                              required
+                            >
+                          </div>
 
-          <div class="review-edit-group">
-            <label>Loại review</label>
-            <select name="review_type">
-              <option value="website" <?= $review['review_type'] === 'website' ? 'selected' : ''; ?>>
-                Website
-              </option>
-              <option value="product" <?= $review['review_type'] === 'product' ? 'selected' : ''; ?>>
-                Sản phẩm
-              </option>
-              <option value="service" <?= $review['review_type'] === 'service' ? 'selected' : ''; ?>>
-                Dịch vụ
-              </option>
-              <option value="delivery" <?= $review['review_type'] === 'delivery' ? 'selected' : ''; ?>>
-                Giao hàng
-              </option>
-            </select>
-          </div>
+                          <div class="review-edit-group">
+                            <label>Loại review</label>
+                            <select name="review_type">
+                              <option value="website" <?= $review['review_type'] === 'website' ? 'selected' : ''; ?>>
+                                Website
+                              </option>
+                              <option value="product" <?= $review['review_type'] === 'product' ? 'selected' : ''; ?>>
+                                Sản phẩm
+                              </option>
+                              <option value="service" <?= $review['review_type'] === 'service' ? 'selected' : ''; ?>>
+                                Dịch vụ
+                              </option>
+                              <option value="delivery" <?= $review['review_type'] === 'delivery' ? 'selected' : ''; ?>>
+                                Giao hàng
+                              </option>
+                            </select>
+                          </div>
 
-          <div class="review-edit-group">
-            <label>ID sản phẩm</label>
-            <input 
-              type="number" 
-              name="product_id" 
-              value="<?= h($review['product_id'] ?? ''); ?>"
-              placeholder="Bỏ trống"
-            >
-          </div>
+                          <div class="review-edit-group">
+                            <label>ID sản phẩm</label>
+                            <input 
+                              type="number" 
+                              name="product_id" 
+                              value="<?= h($review['product_id'] ?? ''); ?>"
+                              placeholder="Bỏ trống"
+                            >
+                          </div>
 
-          <div class="review-edit-group">
-            <label>Trạng thái</label>
-            <select name="status">
-              <option value="pending" <?= $review['status'] === 'pending' ? 'selected' : ''; ?>>
-                Chờ duyệt
-              </option>
-              <option value="approved" <?= $review['status'] === 'approved' ? 'selected' : ''; ?>>
-                Đã duyệt
-              </option>
-            </select>
-          </div>
+                          <div class="review-edit-group">
+                            <label>Trạng thái</label>
+                            <select name="status">
+                              <option value="pending" <?= $review['status'] === 'pending' ? 'selected' : ''; ?>>
+                                Chờ duyệt
+                              </option>
+                              <option value="approved" <?= $review['status'] === 'approved' ? 'selected' : ''; ?>>
+                                Đã duyệt
+                              </option>
+                            </select>
+                          </div>
 
-          <div class="review-edit-group review-edit-full">
-            <label>Ảnh</label>
-            <input 
-              type="text" 
-              name="image" 
-              value="<?= h($review['image'] ?? ''); ?>"
-              placeholder="Ví dụ: uploads/reviews/review-1.jpg"
-            >
-          </div>
+                          <div class="review-edit-group review-edit-full">
+                            <label>Ảnh</label>
+                            <input 
+                              type="text" 
+                              name="image" 
+                              value="<?= h($review['image'] ?? ''); ?>"
+                              placeholder="Ví dụ: uploads/reviews/review-1.jpg"
+                            >
+                          </div>
 
-          <div class="review-edit-group review-edit-full">
-            <label>Nội dung</label>
-            <textarea name="content" rows="6" required><?= h($review['content']); ?></textarea>
-          </div>
+                          <div class="review-edit-group review-edit-full">
+                            <label>Nội dung</label>
+                            <textarea name="content" rows="6" required><?= h($review['content']); ?></textarea>
+                          </div>
 
-          <div class="review-edit-group review-edit-full">
-            <label>Ghi chú admin</label>
-            <textarea name="admin_note" rows="2"><?= h($review['admin_note'] ?? ''); ?></textarea>
-          </div>
-        </div>
+                          <div class="review-edit-group review-edit-full">
+                            <label>Ghi chú admin</label>
+                            <textarea name="admin_note" rows="2"><?= h($review['admin_note'] ?? ''); ?></textarea>
+                          </div>
+                        </div>
 
-        <div class="review-save-row">
-          <button type="submit" class="review-btn review-btn-primary">
-            Lưu sửa bài review
-          </button>
-        </div>
-      </form>
-    </div>
+                        <div class="review-save-row">
+                          <button type="submit" class="review-btn review-btn-primary">
+                            Lưu sửa bài review
+                          </button>
+                        </div>
+                      </form>
+                    </div>
 
-  </div>
-</details>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-  <?php else: ?>
-    <tr>
-      <td colspan="8" class="empty-row">
-        Chưa có bài review nào.
-      </td>
-    </tr>
-  <?php endif; ?>
-</tbody>
+                  </div>
+                </details>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <tr>
+                      <td colspan="8" class="empty-row">
+                        Chưa có bài review nào.
+                      </td>
+                    </tr>
+                  <?php endif; ?>
+                </tbody>
               </table>
             </div>
           </div>

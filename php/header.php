@@ -55,6 +55,17 @@ $cartLink = $isLoggedIn ? "../task3/cart.php" : "../html/login.php";
 
         fill: var(--color-on-surface);
       }
+      /* Màu xanh lá cây cho link đang active */
+      .navigation-link.active span {
+          color: #28a745; 
+          border-bottom: 2px solid #28a745; 
+          padding-bottom: 4px; 
+      }
+
+      .navigation-link:hover span {
+          border-bottom: 2px solid #28a745;
+          padding-bottom: 4px;
+      }
     </style>
     <link
       rel="stylesheet"
@@ -105,37 +116,54 @@ $cartLink = $isLoggedIn ? "../task3/cart.php" : "../html/login.php";
                   </a>
                 </div>
                 <div class="navigation-desktop-menu">
+                  <?php
+                  // Lấy tên file hiện tại (ví dụ: index.php, about.php)
+                  $current_page = basename($_SERVER['PHP_SELF']);
+                  ?>
+
                   <ul class="navigation-links">
-                    <li>
-                      <a href="../task2/about.php">
-                        <div class="navigation-link"><span>About</span></div>
-                      </a>
-                    </li>
-                    <li>
-                      <a href="../task3/products.php">
-                        <div class="navigation-link"><span>Products</span></div>
-                      </a>
-                    </li>
-                    <li>
-                      <a href="../task1/contact.php">
-                        <div class="navigation-link"><span>Contact</span></div>
-                      </a>
-                    </li>
-                    <li>
-                      <a href="../task4/news.php">
-                        <div class="navigation-link"><span>News</span></div>
-                      </a>
-                    </li>
-                    <li>
-                      <a href="../task1/prices.php">
-                        <div class="navigation-link"><span>Prices</span></div>
-                      </a>
-                    </li>
-                    <li>
-                      <a href="../task2/qaa.php">
-                        <div class="navigation-link"><span>Q & A</span></div>
-                      </a>
-                    </li>
+                      <li>
+                          <a href="../task2/about.php">
+                              <div class="navigation-link <?= ($current_page == 'about.php') ? 'active' : '' ?>">
+                                  <span>About</span>
+                              </div>
+                          </a>
+                      </li>
+                      <li>
+                          <a href="../task3/products.php">
+                              <div class="navigation-link <?= ($current_page == 'products.php') ? 'active' : '' ?>">
+                                  <span>Products</span>
+                              </div>
+                          </a>
+                      </li>
+                      <li>
+                          <a href="../task1/contact.php">
+                              <div class="navigation-link <?= ($current_page == 'contact.php') ? 'active' : '' ?>">
+                                  <span>Contact</span>
+                              </div>
+                          </a>
+                      </li>
+                      <li>
+                          <a href="../task4/news.php">
+                              <div class="navigation-link <?= ($current_page == 'news.php') ? 'active' : '' ?>">
+                                  <span>News</span>
+                              </div>
+                          </a>
+                      </li>
+                      <li>
+                          <a href="../task1/prices.php">
+                              <div class="navigation-link <?= ($current_page == 'prices.php') ? 'active' : '' ?>">
+                                  <span>Prices</span>
+                              </div>
+                          </a>
+                      </li>
+                      <li>
+                          <a href="../task2/qaa.php">
+                              <div class="navigation-link <?= ($current_page == 'qaa.php') ? 'active' : '' ?>">
+                                  <span>Q & A</span>
+                              </div>
+                          </a>
+                      </li>
                   </ul>
                 </div>
                 <div class="navigation-actions">

@@ -7,10 +7,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-/*
-    Kết nối DB XAMPP.
-    Nếu project bạn đã có file connect riêng thì thay đoạn này bằng include file connect đó.
-*/
 $conn = new mysqli("localhost", "root", "", "btl_ltw");
 
 if ($conn->connect_error) {
