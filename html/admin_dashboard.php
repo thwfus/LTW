@@ -267,6 +267,15 @@ $stmt->execute([
       $adminId = (int)$_SESSION['user_id'];
       $adminNote = trim($_POST['admin_note'] ?? '');
 
+      $checkAdmin = $pdo->prepare("SELECT user_id FROM admin WHERE user_id = ?");
+      $checkAdmin->execute([$adminId]);
+
+      if (!$checkAdmin->fetch()) {
+          // Nếu chưa có trong bảng admin, thì chèn vào luôn
+          $insertAdmin = $pdo->prepare("INSERT INTO admin (user_id) VALUES (?)");
+          $insertAdmin->execute([$adminId]);
+      }
+
       if ($action === 'approve') {
           $stmt = $pdo->prepare("
               UPDATE review_cmt
@@ -1427,37 +1436,35 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
                         </td>
 
                         <td style="min-width: 230px;">
-                          <form method="POST" action="admin_dashboard.php#reviews">
-                            <input type="hidden" name="review_cmt_id" value="<?= (int)$comment['review_cmt_id']; ?>">
+                          <form method="POST" action="admin_dashboard.php#reviews" style="max-width: 200px; display: flex; flex-direction: column; gap: 6px;">
+                              <input type="hidden" name="review_cmt_id" value="<?= (int)$comment['review_cmt_id']; ?>">
 
-                            <textarea 
-                              name="admin_note" 
-                              rows="2" 
-                              placeholder="Ghi chú admin..."
-                              style="width:100%; margin-bottom:8px;"
-                            ><?= h($comment['admin_note'] ?? ''); ?></textarea>
+                              <textarea 
+                                  name="admin_note" 
+                                  rows="2" 
+                                  placeholder="Ghi chú admin..."
+                                  style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; resize: none; box-sizing: border-box; font-family: sans-serif;"
+                              ><?= htmlspecialchars($comment['admin_note'] ?? ''); ?></textarea>
 
-                            <div class="action-btns">
-                              <?php if ($comment['status'] !== 'approved'): ?>
-                                <button type="submit" name="comment_action" value="approve" class="btn-table">
-                                  Duyệt
-                                </button>
-                              <?php else: ?>
-                                <button type="submit" name="comment_action" value="pending" class="btn-table">
-                                  Ẩn
-                                </button>
-                              <?php endif; ?>
+                              <div style="display: flex; gap: 5px;">
+                                  <?php if ($comment['status'] !== 'approved'): ?>
+                                      <button type="submit" name="comment_action" value="approve" 
+                                          style="flex: 1; padding: 6px 0; font-size: 12px; font-weight: bold; cursor: pointer; background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 4px;">
+                                          Duyệt
+                                      </button>
+                                  <?php else: ?>
+                                      <button type="submit" name="comment_action" value="pending" 
+                                          style="flex: 1; padding: 6px 0; font-size: 12px; font-weight: bold; cursor: pointer; background: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; border-radius: 4px;">
+                                          Ẩn
+                                      </button>
+                                  <?php endif; ?>
 
-                              <button 
-                                type="submit" 
-                                name="comment_action" 
-                                value="delete" 
-                                class="btn-table btn-danger"
-                                onclick="return confirm('Xóa bình luận này?')"
-                              >
-                                Xóa
-                              </button>
-                            </div>
+                                  <button type="submit" name="comment_action" value="delete" 
+                                      style="flex: 1; padding: 6px 0; font-size: 12px; font-weight: bold; cursor: pointer; background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 4px;"
+                                      onclick="return confirm('Xóa?')">
+                                      Xóa
+                                  </button>
+                              </div>
                           </form>
                         </td>
                       </tr>

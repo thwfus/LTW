@@ -367,19 +367,7 @@
 .status-unread { background-color: #fff1f2; color: var(--danger); }
 .status-read { background-color: #f0fdf4; color: var(--success); }
 
-.action-btns {
-  display: flex;
-  gap: 10px;
-}
 
-.btn-table {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary-color);
-  text-decoration: none;
-}
-
-.btn-table.btn-danger { color: var(--danger); }
 
 /* --- THÔNG BÁO (ALERTS) --- */
 .admin-alert {
