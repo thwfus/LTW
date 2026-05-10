@@ -712,6 +712,97 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
 
   $pendingReviewCount = count(array_filter($reviews, fn($r) => $r['status'] === 'pending'));
   $pendingCommentCount = count(array_filter($reviewComments, fn($c) => $c['status'] === 'pending'));
+
+  // ===============================
+  // QUẢN LÝ TRANG ABOUT
+  // ===============================
+  try {
+      $pdo->exec("CREATE TABLE IF NOT EXISTS about_images (
+          image_id    INT AUTO_INCREMENT PRIMARY KEY,
+          filename    VARCHAR(255) NOT NULL,
+          path        VARCHAR(500) NOT NULL,
+          alt_text    VARCHAR(255) NOT NULL DEFAULT '',
+          uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+      $pdo->exec("CREATE TABLE IF NOT EXISTS about_content (
+          id         INT AUTO_INCREMENT PRIMARY KEY,
+          content    LONGTEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+      if ((int)$pdo->query("SELECT COUNT(*) FROM about_content")->fetchColumn() === 0) {
+          $pdo->exec("INSERT INTO about_content (content) VALUES ('')");
+      }
+  } catch (Exception $e) {}
+
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['about_action'])) {
+      $aAction = $_POST['about_action'];
+
+      if ($aAction === 'upload_image') {
+          $altText = trim($_POST['about_alt'] ?? '');
+          if (!empty($_FILES['about_img']['name']) && $_FILES['about_img']['error'] === UPLOAD_ERR_OK) {
+              $fType = mime_content_type($_FILES['about_img']['tmp_name']);
+              $fSize = $_FILES['about_img']['size'];
+              $allowedMime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+              if (!in_array($fType, $allowedMime)) {
+                  $_SESSION['admin_notice'] = 'Định dạng ảnh không hợp lệ (JPG, PNG, WEBP, GIF).';
+              } elseif ($fSize > 5 * 1024 * 1024) {
+                  $_SESSION['admin_notice'] = 'Ảnh không được vượt quá 5MB.';
+              } else {
+                  $uploadDir = realpath(__DIR__ . '/..') . '/uploads/about/';
+                  if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                  $ext     = strtolower(pathinfo($_FILES['about_img']['name'], PATHINFO_EXTENSION));
+                  $newName = 'about_' . date('YmdHis') . '_' . mt_rand(100, 999) . '.' . $ext;
+                  if (move_uploaded_file($_FILES['about_img']['tmp_name'], $uploadDir . $newName)) {
+                      $imgPath = 'uploads/about/' . $newName;
+                      $stmt = $pdo->prepare("INSERT INTO about_images (filename, path, alt_text) VALUES (?, ?, ?)");
+                      $stmt->execute([$newName, $imgPath, $altText]);
+                      $newId = $pdo->lastInsertId();
+                      $_SESSION['admin_notice'] = "Upload thành công! ID ảnh: $newId — dùng /image($newId) trong editor.";
+                  } else {
+                      $_SESSION['admin_notice'] = 'Không thể lưu ảnh lên server.';
+                  }
+              }
+          } else {
+              $_SESSION['admin_notice'] = 'Vui lòng chọn file ảnh.';
+          }
+          header('Location: admin_dashboard.php#about');
+          exit();
+      }
+
+      if ($aAction === 'save_content') {
+          $rawContent = $_POST['about_content'] ?? '';
+          $pdo->prepare("UPDATE about_content SET content = ?, updated_at = NOW() WHERE id = 1")->execute([$rawContent]);
+          $_SESSION['admin_notice'] = 'Đã lưu nội dung trang About.';
+          header('Location: admin_dashboard.php#about');
+          exit();
+      }
+
+      if ($aAction === 'delete_image') {
+          $imgId  = (int)($_POST['image_id'] ?? 0);
+          $imgStmt = $pdo->prepare("SELECT path FROM about_images WHERE image_id = ? LIMIT 1");
+          $imgStmt->execute([$imgId]);
+          $imgData = $imgStmt->fetch(PDO::FETCH_ASSOC);
+          if ($imgData) {
+              $fullPath = realpath(__DIR__ . '/..') . '/' . ltrim($imgData['path'], '/');
+              if (file_exists($fullPath)) @unlink($fullPath);
+              $pdo->prepare("DELETE FROM about_images WHERE image_id = ?")->execute([$imgId]);
+              $_SESSION['admin_notice'] = 'Đã xóa ảnh ID ' . $imgId . '.';
+          }
+          header('Location: admin_dashboard.php#about');
+          exit();
+      }
+  }
+
+  try {
+      $aboutContent = $pdo->query("SELECT content FROM about_content WHERE id = 1 LIMIT 1")->fetchColumn();
+      if ($aboutContent === false) $aboutContent = '';
+      $aboutImages  = $pdo->query("SELECT * FROM about_images ORDER BY uploaded_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+  } catch (Exception $e) {
+      $aboutContent = '';
+      $aboutImages  = [];
+  }
 ?>
 
 
@@ -743,6 +834,9 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
         </a>
         <a href="#pages-manager" class="menu-link" data-tab="pages-manager">
           <span class="menu-icon">⚙️</span> Cấu hình Website
+        </a>
+        <a href="#about" class="menu-link" data-tab="about">
+          <span class="menu-icon">📄</span> Trang About
         </a>
 
         <div class="menu-group">Kinh doanh</div>
@@ -788,7 +882,7 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="topbar-right">
           <div class="admin-info">
-            <p class="admin-name">Chào Huy, <strong>Admin</strong></p>
+            <p class="admin-name">Chào <strong>Admin</strong></p>
             <img src="https://ui-avatars.com/api/?name=Admin&background=1e4e36&color=fff" alt="Avatar" class="admin-avatar">
           </div>
         </div>
@@ -1900,6 +1994,160 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
           </div>
         </section>
 
+        <!-- ======================== -->
+        <!-- SECTION: TRANG ABOUT     -->
+        <!-- ======================== -->
+        <section id="about" class="admin-section">
+          <div class="section-header-wrap">
+            <h1 class="section-title">Quản lý trang About</h1>
+            <p class="section-desc">
+              Soạn nội dung giới thiệu. Dùng <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:13px;">/image(ID)</code>
+              trên một dòng riêng để chèn ảnh dạng block — tương tự <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:13px;">\includegraphics</code> trong LaTeX.
+            </p>
+          </div>
+
+          <!-- Upload ảnh mới -->
+          <div class="admin-card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <h2>Upload ảnh vào thư viện About</h2>
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="admin_dashboard.php#about">
+              <input type="hidden" name="about_action" value="upload_image">
+              <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:16px 20px;">
+                <div class="form-group" style="flex:2;min-width:200px;margin:0;">
+                  <label>Chọn ảnh (JPG, PNG, WEBP, GIF — tối đa 5MB)</label>
+                  <input type="file" name="about_img" accept="image/*" required style="padding:8px;width:100%;">
+                </div>
+                <div class="form-group" style="flex:2;min-width:180px;margin:0;">
+                  <label>Chú thích ảnh (alt text)</label>
+                  <input type="text" name="about_alt" placeholder="Mô tả ngắn về ảnh..." style="width:100%;">
+                </div>
+                <div style="flex-shrink:0;">
+                  <button type="submit" class="btn-submit">Upload ảnh</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Editor + Image Library -->
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+
+            <!-- Editor -->
+            <div class="admin-card">
+              <div class="card-header">
+                <h2>Editor nội dung trang About</h2>
+                <p style="font-size:13px;color:#888;margin-top:6px;line-height:1.6;">
+                  Gõ văn bản bình thường cho các đoạn giới thiệu.
+                  Gõ <strong>/image(ID)</strong> trên một dòng riêng (hoặc click ảnh bên phải) để chèn ảnh dạng block.
+                  Dòng trống tạo khoảng cách giữa các đoạn.
+                </p>
+              </div>
+              <form method="POST" action="admin_dashboard.php#about" id="aboutEditorForm">
+                <input type="hidden" name="about_action" value="save_content">
+                <div style="padding:16px 20px;">
+                  <div id="aboutEditorWrap" style="position:relative;border:1px solid #d1c9bb;border-radius:8px;overflow:hidden;">
+                    <textarea
+                      name="about_content"
+                      id="aboutEditor"
+                      rows="28"
+                      style="width:100%;box-sizing:border-box;font-family:'Fira Code','Cascadia Code','Courier New',monospace;
+                             font-size:14px;line-height:1.9;padding:18px 20px;
+                             background:#1c1c28;color:#e2ddd6;border:none;outline:none;
+                             resize:vertical;tab-size:2;white-space:pre-wrap;"
+                      placeholder="Nhập nội dung trang About...&#10;&#10;Ví dụ:&#10;The Soul Behind the Wood&#10;&#10;Crafting a legacy of silence, strength, and artisanal soul.&#10;&#10;/image(1)&#10;&#10;Our Heritage&#10;&#10;At Olivewood Atelier, we believe that furniture is more than just utility."
+                    ><?= h($aboutContent) ?></textarea>
+                  </div>
+                  <div style="margin-top:10px;font-size:12px;color:#666;line-height:2;padding:12px 14px;background:#f9f8f6;border-radius:6px;border:1px solid #ede9e3;">
+                    <strong>Cú pháp:</strong><br>
+                    <code style="background:#eee;padding:1px 5px;border-radius:3px;">header(Tiêu đề lớn)</code> → chữ rất to &nbsp;|&nbsp;
+                    <code style="background:#eee;padding:1px 5px;border-radius:3px;">subheader(Đề mục)</code> → chữ to vừa<br>
+                    Văn bản thường → đoạn văn &nbsp;|&nbsp;
+                    <code style="background:#eee;padding:1px 5px;border-radius:3px;">/image(ID)</code> trên dòng riêng → ảnh block &nbsp;|&nbsp;
+                    Dòng trống → ngắt đoạn
+                  </div>
+                </div>
+                <div class="form-footer" style="padding:0 20px 20px;">
+                  <button type="submit" class="btn-submit">Lưu nội dung About</button>
+                  <button type="button" onclick="previewAboutContent()"
+                          style="margin-left:10px;padding:10px 20px;border:1px solid #1e4e36;
+                                 background:transparent;color:#1e4e36;border-radius:6px;cursor:pointer;font-size:14px;">
+                    Xem trước
+                  </button>
+                </div>
+              </form>
+
+              <!-- Preview modal -->
+              <div id="aboutPreviewModal" style="display:none;position:fixed;inset:0;z-index:9999;
+                   background:rgba(0,0,0,0.6);overflow-y:auto;padding:40px 20px;">
+                <div style="max-width:760px;margin:0 auto;background:#fff;border-radius:12px;
+                            padding:40px;position:relative;">
+                  <button onclick="document.getElementById('aboutPreviewModal').style.display='none'"
+                          style="position:absolute;top:16px;right:20px;background:none;border:none;
+                                 font-size:24px;cursor:pointer;color:#666;">&times;</button>
+                  <h3 style="margin-bottom:20px;color:#1e4e36;">Xem trước nội dung About</h3>
+                  <div id="aboutPreviewBody" style="font-family:Georgia,serif;color:#333;line-height:1.9;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thư viện ảnh -->
+            <div class="admin-card" style="position:sticky;top:80px;">
+              <div class="card-header">
+                <h2>Thư viện ảnh</h2>
+                <p style="font-size:12px;color:#999;margin-top:4px;">Click ảnh → tự chèn vào editor</p>
+              </div>
+              <div style="padding:12px 16px;max-height:620px;overflow-y:auto;">
+                <?php if (empty($aboutImages)): ?>
+                  <p style="color:#aaa;font-size:13px;text-align:center;padding:24px 0;">
+                    Chưa có ảnh nào.<br>Upload ảnh ở trên để bắt đầu.
+                  </p>
+                <?php else: ?>
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <?php foreach ($aboutImages as $aImg): ?>
+                      <div class="about-lib-card"
+                           onclick="insertImageTag(<?= (int)$aImg['image_id'] ?>)"
+                           title="Click để chèn /image(<?= (int)$aImg['image_id'] ?>) vào editor"
+                           style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                                  border:1px solid #ddd8cf;border-radius:8px;cursor:pointer;
+                                  transition:all 0.15s;background:#faf9f7;user-select:none;">
+                        <img src="../<?= h($aImg['path']) ?>"
+                             alt="<?= h($aImg['alt_text']) ?>"
+                             style="width:60px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid #e8e3db;">
+                        <div style="flex:1;min-width:0;">
+                          <div style="font-family:monospace;font-size:12px;font-weight:700;color:#1e4e36;
+                                      background:#e8f0eb;display:inline-block;padding:2px 7px;border-radius:4px;">
+                            /image(<?= (int)$aImg['image_id'] ?>)
+                          </div>
+                          <?php if ($aImg['alt_text']): ?>
+                            <div style="font-size:11px;color:#777;margin-top:4px;
+                                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                              <?= h($aImg['alt_text']) ?>
+                            </div>
+                          <?php endif; ?>
+                          <div style="font-size:10px;color:#bbb;margin-top:2px;">
+                            <?= date('d/m/Y H:i', strtotime($aImg['uploaded_at'])) ?>
+                          </div>
+                        </div>
+                        <form method="POST" action="admin_dashboard.php#about"
+                              onsubmit="return confirm('Xóa ảnh ID <?= (int)$aImg['image_id'] ?>?')"
+                              onclick="event.stopPropagation()" style="flex-shrink:0;">
+                          <input type="hidden" name="about_action" value="delete_image">
+                          <input type="hidden" name="image_id" value="<?= (int)$aImg['image_id'] ?>">
+                          <button type="submit"
+                                  style="background:none;border:none;color:#c0392b;cursor:pointer;
+                                         font-size:18px;line-height:1;padding:4px;"
+                                  title="Xóa ảnh">&times;</button>
+                        </form>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -1938,6 +2186,104 @@ $reviews = $stmtReviews->fetchAll(PDO::FETCH_ASSOC);
             showSection(currentHash);
         }
     });
+
+    // ========================
+    // ABOUT EDITOR FUNCTIONS
+    // ========================
+    function insertImageTag(imageId) {
+        const editor = document.getElementById('aboutEditor');
+        if (!editor) return;
+        const tag = '/image(' + imageId + ')';
+        const start = editor.selectionStart;
+        const end   = editor.selectionEnd;
+        const val   = editor.value;
+
+        // Đảm bảo tag nằm trên dòng riêng
+        const prefix = (start > 0 && val[start - 1] !== '\n') ? '\n' : '';
+        const suffix = (end < val.length && val[end] !== '\n') ? '\n' : '';
+        const insertion = prefix + tag + suffix;
+
+        editor.value = val.substring(0, start) + insertion + val.substring(end);
+        const newCursor = start + insertion.length;
+        editor.setSelectionRange(newCursor, newCursor);
+        editor.focus();
+
+        // Highlight card vừa click
+        const card = event.currentTarget;
+        card.style.borderColor = '#1e4e36';
+        card.style.background  = '#e8f0eb';
+        setTimeout(() => {
+            card.style.borderColor = '#ddd8cf';
+            card.style.background  = '#faf9f7';
+        }, 600);
+    }
+
+    // Hover effect cho image library cards
+    document.querySelectorAll('.about-lib-card').forEach(function(card) {
+        card.addEventListener('mouseenter', function() {
+            this.style.borderColor = '#1e4e36';
+            this.style.background  = '#f0f5f1';
+            this.style.transform   = 'translateX(2px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.borderColor = '#ddd8cf';
+            this.style.background  = '#faf9f7';
+            this.style.transform   = '';
+        });
+    });
+
+    function previewAboutContent() {
+        const raw = document.getElementById('aboutEditor').value;
+        const lines = raw.split('\n');
+        let html = '';
+        let paraLines = [];
+
+        function flushPara() {
+            const text = paraLines.join(' ').trim();
+            if (text) {
+                html += '<p style="margin:0 0 16px;font-size:16px;color:#333;line-height:1.9;">'
+                      + text.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                      + '</p>';
+            }
+            paraLines = [];
+        }
+
+        lines.forEach(function(line) {
+            const trimmed = line.trimEnd();
+            const mImg    = trimmed.match(/^\/image\((\d+)\)\s*$/);
+            const mHead   = trimmed.match(/^header\((.+)\)\s*$/);
+            const mSub    = trimmed.match(/^subheader\((.+)\)\s*$/);
+
+            if (mImg) {
+                flushPara();
+                const imgEl = document.querySelector('.about-lib-card[onclick*="(' + mImg[1] + ')"] img');
+                if (imgEl) {
+                    html += '<figure style="margin:32px 0;text-align:center;">'
+                          + '<img src="' + imgEl.src + '" style="max-width:100%;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">'
+                          + '</figure>';
+                } else {
+                    html += '<div style="text-align:center;padding:20px;background:#f5f5f5;border-radius:8px;margin:20px 0;color:#999;font-family:monospace;">'
+                          + '[Ảnh ID ' + mImg[1] + ' chưa có trong thư viện]</div>';
+                }
+            } else if (mHead) {
+                flushPara();
+                html += '<h1 style="font-size:2.8rem;font-weight:700;margin:40px 0 12px;line-height:1.2;color:#1e4e36;">'
+                      + mHead[1].replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</h1>';
+            } else if (mSub) {
+                flushPara();
+                html += '<h2 style="font-size:1.6rem;font-weight:600;margin:28px 0 8px;line-height:1.35;color:#2d6b4a;">'
+                      + mSub[1].replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</h2>';
+            } else if (trimmed.trim() === '') {
+                flushPara();
+            } else {
+                paraLines.push(line);
+            }
+        });
+        flushPara();
+
+        document.getElementById('aboutPreviewBody').innerHTML = html || '<p style="color:#aaa;">Chưa có nội dung.</p>';
+        document.getElementById('aboutPreviewModal').style.display = 'block';
+    }
   </script>
 </body>
 </html>

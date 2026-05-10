@@ -106,6 +106,57 @@
     }
 }
 
+/* --- DYNAMIC CONTENT (từ database) --- */
+.about-dynamic-content {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--spacing-3xl) 0 var(--spacing-5xl);
+}
+
+.about-content-header {
+    font-family: var(--font-family-heading, Georgia, serif);
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-on-surface, #e2ddd6);
+    margin: var(--spacing-4xl, 56px) 0 var(--spacing-lg, 20px);
+    letter-spacing: -0.02em;
+}
+
+.about-content-subheader {
+    font-family: var(--font-family-heading, Georgia, serif);
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-on-surface, #e2ddd6);
+    margin: var(--spacing-3xl, 40px) 0 var(--spacing-md, 12px);
+    opacity: 0.85;
+}
+
+.about-content-text {
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: var(--color-on-surface, #e2ddd6);
+    margin-bottom: var(--spacing-xl, 24px);
+}
+
+.about-content-image {
+    margin: var(--spacing-3xl, 48px) 0;
+    text-align: center;
+}
+
+.about-content-image img {
+    max-width: 100%;
+    width: 100%;
+    max-height: 500px;
+    display: block;
+    margin: 0 auto;
+    border-radius: var(--border-radius-lg, 12px);
+    object-fit: cover;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    display: block;
+}
+
 /* --- ADMIN STYLES --- */
 .admin-controls {
     position: fixed;
