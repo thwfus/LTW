@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 10, 2026 at 03:52 PM
+-- Generation Time: May 11, 2026 at 06:27 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -11,9 +11,7 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-DROP DATABASE IF EXISTS btl_ltw;
-CREATE DATABASE btl_ltw DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE btl_ltw;
+
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -348,12 +346,11 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `about_content`;
-CREATE TABLE IF NOT EXISTS `about_content` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `about_content` (
+  `id` int(11) NOT NULL,
   `content` text NOT NULL,
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `about_content`
@@ -369,14 +366,13 @@ INSERT INTO `about_content` (`id`, `content`, `updated_at`) VALUES
 --
 
 DROP TABLE IF EXISTS `about_images`;
-CREATE TABLE IF NOT EXISTS `about_images` (
-  `image_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `about_images` (
+  `image_id` int(11) NOT NULL,
   `filename` varchar(255) NOT NULL,
   `path` varchar(255) NOT NULL,
   `alt_text` varchar(255) DEFAULT NULL,
-  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`image_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `about_images`
@@ -392,16 +388,14 @@ INSERT INTO `about_images` (`image_id`, `filename`, `path`, `alt_text`, `uploade
 --
 
 DROP TABLE IF EXISTS `address`;
-CREATE TABLE IF NOT EXISTS `address` (
-  `address_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `address` (
+  `address_id` int(11) NOT NULL,
   `phone` varchar(20) NOT NULL,
   `ward` varchar(100) DEFAULT NULL,
   `city` varchar(100) NOT NULL,
   `recipient_name` varchar(100) NOT NULL,
-  `cus_id` int(11) NOT NULL,
-  PRIMARY KEY (`address_id`),
-  KEY `fk_address_customer` (`cus_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `cus_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `address`
@@ -426,10 +420,9 @@ INSERT INTO `address` (`address_id`, `phone`, `ward`, `city`, `recipient_name`, 
 --
 
 DROP TABLE IF EXISTS `admin`;
-CREATE TABLE IF NOT EXISTS `admin` (
+CREATE TABLE `admin` (
   `user_id` int(11) NOT NULL,
-  `permission_level` varchar(50) NOT NULL,
-  PRIMARY KEY (`user_id`)
+  `permission_level` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -456,14 +449,12 @@ INSERT INTO `admin` (`user_id`, `permission_level`) VALUES
 --
 
 DROP TABLE IF EXISTS `cart`;
-CREATE TABLE IF NOT EXISTS `cart` (
-  `cart_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `cart` (
+  `cart_id` int(11) NOT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `status` varchar(50) DEFAULT 'Đang chọn hàng',
-  `cus_id` int(11) NOT NULL,
-  PRIMARY KEY (`cart_id`),
-  KEY `fk_cart_customer` (`cus_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `cus_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `cart`
@@ -492,13 +483,11 @@ INSERT INTO `cart` (`cart_id`, `created_at`, `status`, `cus_id`) VALUES
 --
 
 DROP TABLE IF EXISTS `cartitem`;
-CREATE TABLE IF NOT EXISTS `cartitem` (
+CREATE TABLE `cartitem` (
   `cart_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
-  `unit_price` decimal(12,2) NOT NULL,
-  PRIMARY KEY (`cart_id`,`product_id`),
-  KEY `fk_cartitem_product` (`product_id`)
+  `unit_price` decimal(12,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -515,7 +504,8 @@ INSERT INTO `cartitem` (`cart_id`, `product_id`, `quantity`, `unit_price`) VALUE
 (7, 7, 1, 42000000.00),
 (8, 8, 2, 6500000.00),
 (9, 9, 1, 15500000.00),
-(10, 10, 1, 9000000.00);
+(10, 10, 1, 9000000.00),
+(18, 9, 1, 15500001.00);
 
 --
 -- Triggers `cartitem`
@@ -582,12 +572,10 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `category`;
-CREATE TABLE IF NOT EXISTS `category` (
-  `category_id` int(11) NOT NULL AUTO_INCREMENT,
-  `category_name` varchar(100) NOT NULL,
-  PRIMARY KEY (`category_id`),
-  UNIQUE KEY `category_name` (`category_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `category` (
+  `category_id` int(11) NOT NULL,
+  `category_name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `category`
@@ -612,15 +600,14 @@ INSERT INTO `category` (`category_id`, `category_name`) VALUES
 --
 
 DROP TABLE IF EXISTS `contact_messages`;
-CREATE TABLE IF NOT EXISTS `contact_messages` (
-  `message_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `contact_messages` (
+  `message_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `mail` varchar(150) NOT NULL,
   `question` text NOT NULL,
   `status` varchar(50) DEFAULT 'Chưa đọc',
-  `created_at` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -629,10 +616,9 @@ CREATE TABLE IF NOT EXISTS `contact_messages` (
 --
 
 DROP TABLE IF EXISTS `customer`;
-CREATE TABLE IF NOT EXISTS `customer` (
+CREATE TABLE `customer` (
   `user_id` int(11) NOT NULL,
-  `loyalty_point` int(11) DEFAULT 0,
-  PRIMARY KEY (`user_id`)
+  `loyalty_point` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -660,14 +646,12 @@ INSERT INTO `customer` (`user_id`, `loyalty_point`) VALUES
 --
 
 DROP TABLE IF EXISTS `faq`;
-CREATE TABLE IF NOT EXISTS `faq` (
-  `faq_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `faq` (
+  `faq_id` int(11) NOT NULL,
   `question` text NOT NULL,
   `answer` text NOT NULL,
-  `category_id` int(11) NOT NULL,
-  PRIMARY KEY (`faq_id`),
-  KEY `fk_faq_category` (`category_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `category_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `faq`
@@ -692,14 +676,12 @@ INSERT INTO `faq` (`faq_id`, `question`, `answer`, `category_id`) VALUES
 --
 
 DROP TABLE IF EXISTS `orderitem`;
-CREATE TABLE IF NOT EXISTS `orderitem` (
+CREATE TABLE `orderitem` (
   `order_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
   `sold_price` decimal(12,2) NOT NULL,
-  `subtotal` decimal(12,2) NOT NULL,
-  PRIMARY KEY (`order_id`,`product_id`),
-  KEY `fk_orderitem_product` (`product_id`)
+  `subtotal` decimal(12,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -830,20 +812,16 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `orders`;
-CREATE TABLE IF NOT EXISTS `orders` (
-  `order_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `orders` (
+  `order_id` int(11) NOT NULL,
   `order_date` datetime DEFAULT current_timestamp(),
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `shipping_fee` decimal(12,2) DEFAULT 0.00,
   `cus_id` int(11) NOT NULL,
   `address_id` int(11) DEFAULT NULL,
   `voucher_id` int(11) DEFAULT NULL,
-  `status` varchar(50) DEFAULT 'Chờ xử lý',
-  PRIMARY KEY (`order_id`),
-  KEY `fk_orders_customer` (`cus_id`),
-  KEY `fk_orders_address` (`address_id`),
-  KEY `fk_orders_voucher` (`voucher_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1014 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `status` varchar(50) DEFAULT 'Chờ xử lý'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `orders`
@@ -912,15 +890,13 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `payment`;
-CREATE TABLE IF NOT EXISTS `payment` (
-  `payment_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `payment` (
+  `payment_id` int(11) NOT NULL,
   `payment_method` varchar(50) NOT NULL,
   `payment_date` datetime DEFAULT current_timestamp(),
   `amount` decimal(12,2) NOT NULL,
-  `order_id` int(11) NOT NULL,
-  PRIMARY KEY (`payment_id`),
-  UNIQUE KEY `order_id` (`order_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `order_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `payment`
@@ -964,8 +940,8 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `product`;
-CREATE TABLE IF NOT EXISTS `product` (
-  `product_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `product` (
+  `product_id` int(11) NOT NULL,
   `product_name` varchar(150) NOT NULL,
   `price` decimal(12,2) NOT NULL,
   `stock_quantity` int(11) NOT NULL DEFAULT 0,
@@ -974,25 +950,26 @@ CREATE TABLE IF NOT EXISTS `product` (
   `warranty_period` varchar(50) DEFAULT NULL,
   `category_id` int(11) NOT NULL,
   `url` varchar(255) DEFAULT 'uploads/products/default.jpg',
-  PRIMARY KEY (`product_id`),
-  KEY `fk_product_category` (`category_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `url2` varchar(255) DEFAULT NULL,
+  `url3` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `product`
 --
 
-INSERT INTO `product` (`product_id`, `product_name`, `price`, `stock_quantity`, `material`, `color`, `warranty_period`, `category_id`, `url`) VALUES
-(1, 'Olivewood Dining Chair', 8500001.00, 22, 'Olivewood', 'Natural Beige', '24 tháng', 1, '../uploads/products/prod_1778417251_406.jpg'),
-(2, 'Minimalist Oak Table', 24000001.00, 13, 'Oak Wood', 'Natural Oak', '36 tháng', 2, '../uploads/products/prod_1778417225_559.jpg'),
-(3, 'Velvet Lounge Armchair', 12500001.00, 19, 'Velvet, Wood', 'Cream', '24 tháng', 4, '../uploads/products/prod_1778417189_907.jpg'),
-(4, 'Artisan Sideboard', 31000001.00, 7, 'Olivewood', 'Natural Brown', '36 tháng', 5, '../uploads/products/prod_1778417163_651.jpg'),
-(5, 'Marble Top Console', 18499001.00, 11, 'Marble, Wood', 'White Marble', '24 tháng', 3, '../uploads/products/prod_1778417133_364.jpg'),
-(6, 'Curved Walnut Desk', 22000001.00, 9, 'Walnut Wood', 'Walnut Brown', '36 tháng', 6, '../uploads/products/prod_1778417098_684.jpg'),
-(7, 'Nordic Fabric Sofa', 42000001.00, 4, 'Fabric, Wood', 'Gray', '36 tháng', 7, '../uploads/products/prod_1778417028_705.jpg'),
-(8, 'Bamboo Wall Shelf', 6499001.00, 38, 'Bamboo', 'Light Brown', '12 tháng', 8, '../uploads/products/prod_1778416996_691.jpg'),
-(9, 'Platform Storage Bed', 15500001.00, 17, 'Plywood, Fabric', 'Dark Gray', '24 tháng', 9, '../uploads/products/prod_1778416951_545.jpg'),
-(10, 'Rattan Storage Cabinet', 50001.00, 22, 'Rattan, Wood', 'Natural Brown', '18 tháng', 10, '../uploads/products/prod_1778416898_153.jpg');
+INSERT INTO `product` (`product_id`, `product_name`, `price`, `stock_quantity`, `material`, `color`, `warranty_period`, `category_id`, `url`, `url2`, `url3`) VALUES
+(1, 'Olivewood Dining Chair', 8500001.00, 22, 'Olivewood', 'Natural Beige', '24 tháng', 1, '../uploads/products/prod_1778417251_406.jpg', NULL, NULL),
+(2, 'Minimalist Oak Table', 24000001.00, 13, 'Oak Wood', 'Natural Oak', '36 tháng', 2, '../uploads/products/prod_1778417225_559.jpg', NULL, NULL),
+(3, 'Velvet Lounge Armchair', 12500001.00, 19, 'Velvet, Wood', 'Cream', '24 tháng', 4, '../uploads/products/prod_1778417189_907.jpg', NULL, NULL),
+(4, 'Artisan Sideboard', 31000001.00, 7, 'Olivewood', 'Natural Brown', '36 tháng', 5, '../uploads/products/prod_1778417163_651.jpg', NULL, NULL),
+(5, 'Marble Top Console', 18499001.00, 11, 'Marble, Wood', 'White Marble', '24 tháng', 3, '../uploads/products/prod_1778417133_364.jpg', NULL, NULL),
+(6, 'Curved Walnut Desk', 22000001.00, 9, 'Walnut Wood', 'Walnut Brown', '36 tháng', 6, '../uploads/products/prod_1778417098_684.jpg', NULL, NULL),
+(7, 'Nordic Fabric Sofa', 42000001.00, 4, 'Fabric, Wood', 'Gray', '36 tháng', 7, '../uploads/products/prod_1778417028_705.jpg', NULL, NULL),
+(8, 'Bamboo Wall Shelf', 6499001.00, 38, 'Bamboo', 'Light Brown', '12 tháng', 8, '../uploads/products/prod_1778416996_691.jpg', NULL, NULL),
+(9, 'Platform Storage Bed', 15500001.00, 17, 'Plywood, Fabric', 'Dark Gray', '24 tháng', 9, 'uploads/products/prod_1778472738_img1_581.jpg', 'uploads/products/prod_1778472738_img2_835.jpg', 'uploads/products/prod_1778472738_img3_574.jpg'),
+(10, 'Rattan Storage Cabinet', 50001.00, 22, 'Rattan, Wood', 'Natural Brown', '18 tháng', 10, '../uploads/products/prod_1778416898_153.jpg', NULL, NULL),
+(11, 'Leather Sofa', 1000000.00, 4, 'Leather', 'Natural Brown', '12 months', 7, '../uploads/products/default.jpg', '', '');
 
 --
 -- Triggers `product`
@@ -1043,15 +1020,14 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `profile`;
-CREATE TABLE IF NOT EXISTS `profile` (
+CREATE TABLE `profile` (
   `user_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `address` text DEFAULT NULL,
   `avatar_url` varchar(255) DEFAULT NULL,
-  `member_since` int(4) DEFAULT NULL,
-  PRIMARY KEY (`user_id`)
+  `member_since` int(4) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1070,15 +1046,14 @@ INSERT INTO `profile` (`user_id`, `name`, `email`, `phone`, `address`, `avatar_u
 --
 
 DROP TABLE IF EXISTS `qaa`;
-CREATE TABLE IF NOT EXISTS `qaa` (
-  `q_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `qaa` (
+  `q_id` int(11) NOT NULL,
   `content` text NOT NULL,
   `title` varchar(255) NOT NULL,
   `category` varchar(50) DEFAULT NULL,
   `status` varchar(20) DEFAULT 'pub',
-  `role` varchar(20) DEFAULT 'admin',
-  PRIMARY KEY (`q_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `role` varchar(20) DEFAULT 'admin'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `qaa`
@@ -1097,21 +1072,16 @@ INSERT INTO `qaa` (`q_id`, `content`, `title`, `category`, `status`, `role`) VAL
 --
 
 DROP TABLE IF EXISTS `review_cmt`;
-CREATE TABLE IF NOT EXISTS `review_cmt` (
-  `review_cmt_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `review_cmt` (
+  `review_cmt_id` int(11) NOT NULL,
   `content` text NOT NULL,
   `status` varchar(50) NOT NULL DEFAULT 'approved',
   `admin_note` text DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `review_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `admin_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`review_cmt_id`),
-  KEY `fk_review_cmt_post` (`review_id`),
-  KEY `fk_review_cmt_customer` (`user_id`),
-  KEY `fk_review_cmt_admin` (`admin_id`),
-  KEY `idx_review_cmt_status_created` (`status`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `admin_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `review_cmt`
@@ -1122,7 +1092,8 @@ INSERT INTO `review_cmt` (`review_cmt_id`, `content`, `status`, `admin_note`, `c
 (4, 'Does the chair feel heavy when moving it around?', 'approved', 'Approved sample comment.', '2026-04-29 09:15:00', 3, 15, 2),
 (6, 'Delivery packaging is important for wooden furniture, so this comment helps.', 'approved', 'Approved sample comment.', '2026-04-22 18:00:00', 5, 17, 3),
 (8, 'huy quá dz', 'approved', 'Hidden by admin.', '2026-05-10 13:27:08', 1, 21, 21),
-(9, 'hay quá', 'approved', NULL, '2026-05-10 20:41:36', 3, 22, NULL);
+(9, 'hay quá', 'approved', NULL, '2026-05-10 20:41:36', 3, 22, NULL),
+(10, 'good', 'approved', NULL, '2026-05-11 09:05:40', 2, 22, NULL);
 
 -- --------------------------------------------------------
 
@@ -1131,8 +1102,8 @@ INSERT INTO `review_cmt` (`review_cmt_id`, `content`, `status`, `admin_note`, `c
 --
 
 DROP TABLE IF EXISTS `review_post`;
-CREATE TABLE IF NOT EXISTS `review_post` (
-  `review_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `review_post` (
+  `review_id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `content` text NOT NULL,
   `image` varchar(255) DEFAULT 'uploads/reviews/default.jpg',
@@ -1142,13 +1113,8 @@ CREATE TABLE IF NOT EXISTS `review_post` (
   `created_at` datetime DEFAULT current_timestamp(),
   `user_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
-  `admin_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`review_id`),
-  KEY `fk_review_post_customer` (`user_id`),
-  KEY `fk_review_post_product` (`product_id`),
-  KEY `fk_review_post_admin` (`admin_id`),
-  KEY `idx_review_post_status_created` (`status`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `admin_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `review_post`
@@ -1169,18 +1135,16 @@ INSERT INTO `review_post` (`review_id`, `title`, `content`, `image`, `status`, `
 --
 
 DROP TABLE IF EXISTS `user`;
-CREATE TABLE IF NOT EXISTS `user` (
-  `user_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `user` (
+  `user_id` int(11) NOT NULL,
   `user_name` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `status` varchar(50) DEFAULT 'Hoạt động',
   `password` varchar(255) NOT NULL,
-  `role` varchar(30) NOT NULL,
-  PRIMARY KEY (`user_id`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `role` varchar(30) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user`
@@ -1217,19 +1181,16 @@ INSERT INTO `user` (`user_id`, `user_name`, `email`, `phone`, `created_at`, `sta
 --
 
 DROP TABLE IF EXISTS `voucher`;
-CREATE TABLE IF NOT EXISTS `voucher` (
-  `voucher_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `voucher` (
+  `voucher_id` int(11) NOT NULL,
   `code` varchar(50) NOT NULL,
   `discount_value` decimal(12,2) NOT NULL,
   `max_discount_value` decimal(12,2) DEFAULT NULL,
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `discount_type` varchar(50) NOT NULL,
-  `admin_id` int(11) NOT NULL,
-  PRIMARY KEY (`voucher_id`),
-  UNIQUE KEY `code` (`code`),
-  KEY `fk_voucher_admin` (`admin_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `admin_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `voucher`
@@ -1308,13 +1269,12 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `web_info`;
-CREATE TABLE IF NOT EXISTS `web_info` (
+CREATE TABLE `web_info` (
   `info_id` int(11) NOT NULL DEFAULT 1,
   `phone` varchar(20) DEFAULT NULL,
   `mail` varchar(150) DEFAULT NULL,
   `address` text DEFAULT NULL,
-  `key_value` text DEFAULT NULL,
-  PRIMARY KEY (`info_id`)
+  `key_value` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1323,6 +1283,252 @@ CREATE TABLE IF NOT EXISTS `web_info` (
 
 INSERT INTO `web_info` (`info_id`, `phone`, `mail`, `address`, `key_value`) VALUES
 (1, '0123456666', 'atelier@olivewood.com', '123 Dong Khoi Street, District 1, HCM', 'Cửa hàng nội thất thủ công Olivewood');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `about_content`
+--
+ALTER TABLE `about_content`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `about_images`
+--
+ALTER TABLE `about_images`
+  ADD PRIMARY KEY (`image_id`);
+
+--
+-- Indexes for table `address`
+--
+ALTER TABLE `address`
+  ADD PRIMARY KEY (`address_id`),
+  ADD KEY `fk_address_customer` (`cus_id`);
+
+--
+-- Indexes for table `admin`
+--
+ALTER TABLE `admin`
+  ADD PRIMARY KEY (`user_id`);
+
+--
+-- Indexes for table `cart`
+--
+ALTER TABLE `cart`
+  ADD PRIMARY KEY (`cart_id`),
+  ADD KEY `fk_cart_customer` (`cus_id`);
+
+--
+-- Indexes for table `cartitem`
+--
+ALTER TABLE `cartitem`
+  ADD PRIMARY KEY (`cart_id`,`product_id`),
+  ADD KEY `fk_cartitem_product` (`product_id`);
+
+--
+-- Indexes for table `category`
+--
+ALTER TABLE `category`
+  ADD PRIMARY KEY (`category_id`),
+  ADD UNIQUE KEY `category_name` (`category_name`);
+
+--
+-- Indexes for table `contact_messages`
+--
+ALTER TABLE `contact_messages`
+  ADD PRIMARY KEY (`message_id`);
+
+--
+-- Indexes for table `customer`
+--
+ALTER TABLE `customer`
+  ADD PRIMARY KEY (`user_id`);
+
+--
+-- Indexes for table `faq`
+--
+ALTER TABLE `faq`
+  ADD PRIMARY KEY (`faq_id`),
+  ADD KEY `fk_faq_category` (`category_id`);
+
+--
+-- Indexes for table `orderitem`
+--
+ALTER TABLE `orderitem`
+  ADD PRIMARY KEY (`order_id`,`product_id`),
+  ADD KEY `fk_orderitem_product` (`product_id`);
+
+--
+-- Indexes for table `orders`
+--
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`order_id`),
+  ADD KEY `fk_orders_customer` (`cus_id`),
+  ADD KEY `fk_orders_address` (`address_id`),
+  ADD KEY `fk_orders_voucher` (`voucher_id`);
+
+--
+-- Indexes for table `payment`
+--
+ALTER TABLE `payment`
+  ADD PRIMARY KEY (`payment_id`),
+  ADD UNIQUE KEY `order_id` (`order_id`);
+
+--
+-- Indexes for table `product`
+--
+ALTER TABLE `product`
+  ADD PRIMARY KEY (`product_id`),
+  ADD KEY `fk_product_category` (`category_id`);
+
+--
+-- Indexes for table `profile`
+--
+ALTER TABLE `profile`
+  ADD PRIMARY KEY (`user_id`);
+
+--
+-- Indexes for table `qaa`
+--
+ALTER TABLE `qaa`
+  ADD PRIMARY KEY (`q_id`);
+
+--
+-- Indexes for table `review_cmt`
+--
+ALTER TABLE `review_cmt`
+  ADD PRIMARY KEY (`review_cmt_id`),
+  ADD KEY `fk_review_cmt_post` (`review_id`),
+  ADD KEY `fk_review_cmt_customer` (`user_id`),
+  ADD KEY `fk_review_cmt_admin` (`admin_id`),
+  ADD KEY `idx_review_cmt_status_created` (`status`,`created_at`);
+
+--
+-- Indexes for table `review_post`
+--
+ALTER TABLE `review_post`
+  ADD PRIMARY KEY (`review_id`),
+  ADD KEY `fk_review_post_customer` (`user_id`),
+  ADD KEY `fk_review_post_product` (`product_id`),
+  ADD KEY `fk_review_post_admin` (`admin_id`),
+  ADD KEY `idx_review_post_status_created` (`status`,`created_at`);
+
+--
+-- Indexes for table `user`
+--
+ALTER TABLE `user`
+  ADD PRIMARY KEY (`user_id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `voucher`
+--
+ALTER TABLE `voucher`
+  ADD PRIMARY KEY (`voucher_id`),
+  ADD UNIQUE KEY `code` (`code`),
+  ADD KEY `fk_voucher_admin` (`admin_id`);
+
+--
+-- Indexes for table `web_info`
+--
+ALTER TABLE `web_info`
+  ADD PRIMARY KEY (`info_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `about_content`
+--
+ALTER TABLE `about_content`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `about_images`
+--
+ALTER TABLE `about_images`
+  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `address`
+--
+ALTER TABLE `address`
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `cart`
+--
+ALTER TABLE `cart`
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT for table `category`
+--
+ALTER TABLE `category`
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `contact_messages`
+--
+ALTER TABLE `contact_messages`
+  MODIFY `message_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `faq`
+--
+ALTER TABLE `faq`
+  MODIFY `faq_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `orders`
+--
+ALTER TABLE `orders`
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1014;
+
+--
+-- AUTO_INCREMENT for table `payment`
+--
+ALTER TABLE `payment`
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `product`
+--
+ALTER TABLE `product`
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `qaa`
+--
+ALTER TABLE `qaa`
+  MODIFY `q_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `review_cmt`
+--
+ALTER TABLE `review_cmt`
+  MODIFY `review_cmt_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `review_post`
+--
+ALTER TABLE `review_post`
+  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `user`
+--
+ALTER TABLE `user`
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT for table `voucher`
+--
+ALTER TABLE `voucher`
+  MODIFY `voucher_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables

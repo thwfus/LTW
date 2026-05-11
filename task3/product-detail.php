@@ -35,6 +35,8 @@ $stmt = $conn->prepare('
         p.color,
         p.warranty_period,
         p.url,
+        p.url2,
+        p.url3,
         c.category_id,
         c.category_name
     FROM product p
@@ -95,9 +97,15 @@ include_site_header($product ? $product['product_name'] : 'Product Detail');
                 </div>
 
                 <div class="thumbnail-grid">
-                    <img class="thumb active" src="<?= h(asset_path($product['url'])) ?>" alt="Thumbnail" onclick="setMainImage(this)" />
-                    <img class="thumb" src="<?= h(asset_path($product['url'])) ?>" alt="Thumbnail" onclick="setMainImage(this)" />
-                    <img class="thumb" src="<?= h(asset_path($product['url'])) ?>" alt="Thumbnail" onclick="setMainImage(this)" />
+                    <img class="thumb active" src="<?= h(asset_path($product['url'])) ?>" onclick="setMainImage(this)" />
+                    
+                    <?php if (!empty($product['url2'])): ?>
+                        <img class="thumb" src="<?= h(asset_path($product['url2'])) ?>" onclick="setMainImage(this)" />
+                    <?php endif; ?>
+
+                    <?php if (!empty($product['url3'])): ?>
+                        <img class="thumb" src="<?= h(asset_path($product['url3'])) ?>" onclick="setMainImage(this)" />
+                    <?php endif; ?>
                 </div>
             </div>
 

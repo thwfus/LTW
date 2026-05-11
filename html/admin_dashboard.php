@@ -319,46 +319,44 @@
               $productNotice = 'Vui lòng chọn danh mục.';
               $productNoticeType = 'error';
           } else {
-              // Xử lý upload ảnh
-              $imagePath = $prodOldUrl;
+              $imagePaths = [
+                  1 => trim($_POST['old_url'] ?? ''),
+                  2 => trim($_POST['old_url2'] ?? ''),
+                  3 => trim($_POST['old_url3'] ?? '')
+              ];
+
               $uploadOk = true;
-              if (!empty($_FILES['product_image']['name'])) {
-                  $allowed = ['image/jpeg','image/png','image/gif','image/webp'];
-                  $fileType = $_FILES['product_image']['type'];
-                  $fileSize = $_FILES['product_image']['size'];
-                  if (!in_array($fileType, $allowed)) {
-                      $productNotice = 'Định dạng ảnh không hợp lệ (JPG, PNG, WEBP, GIF).';
-                      $productNoticeType = 'error';
-                      $uploadOk = false;
-                  } elseif ($fileSize > 3 * 1024 * 1024) {
-                      $productNotice = 'Ảnh không được vượt quá 3MB.';
-                      $productNoticeType = 'error';
-                      $uploadOk = false;
-                  } else {
-                      $uploadDir = '../uploads/products/';
-                      if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-                      $ext = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-                      $newName = 'prod_' . time() . '_' . rand(100,999) . '.' . $ext;
-                      if (move_uploaded_file($_FILES['product_image']['tmp_name'], $uploadDir . $newName)) {
-                          $imagePath = '../uploads/products/' . $newName;
-                      } else {
-                          $productNotice = 'Upload ảnh thất bại.';
-                          $productNoticeType = 'error';
-                          $uploadOk = false;
+              $uploadDir = '../uploads/products/';
+              if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+              // Lặp qua 3 khung: product_image, product_image2, product_image3
+              for ($i = 1; $i <= 3; $i++) {
+                  $fieldName = ($i === 1) ? 'product_image' : 'product_image' . $i;
+                  
+                  if (!empty($_FILES[$fieldName]['name'])) {
+                      $ext = pathinfo($_FILES[$fieldName]['name'], PATHINFO_EXTENSION);
+                      $newName = 'prod_' . time() . '_img' . $i . '_' . rand(100,999) . '.' . $ext;
+                      
+                      if (move_uploaded_file($_FILES[$fieldName]['tmp_name'], $uploadDir . $newName)) {
+                          $imagePaths[$i] = 'uploads/products/' . $newName;
                       }
                   }
               }
-              if ($imagePath === '') $imagePath = '../uploads/products/default.jpg';
+
+              if ($prodAction === 'create' && empty($imagePaths[1])) {
+                  $imagePaths[1] = '../uploads/products/default.jpg';
+              }
+              // --- KẾT THÚC THAY THẾ ---
 
               if ($uploadOk) {
                   if ($prodAction === 'create') {
-                      $stmt = $pdo->prepare('INSERT INTO product (product_name, price, stock_quantity, material, color, warranty_period, category_id, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-                      $ok = $stmt->execute([$prodName, $prodPrice, $prodStock, $prodMaterial, $prodColor, $prodWarranty, $prodCategoryId, $imagePath]);
+                      $stmt = $pdo->prepare('INSERT INTO product (product_name, price, stock_quantity, material, color, warranty_period, category_id, url, url2, url3) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                      $ok = $stmt->execute([$prodName, $prodPrice, $prodStock, $prodMaterial, $prodColor, $prodWarranty, $prodCategoryId, $imagePaths[1], $imagePaths[2], $imagePaths[3]]);
                       $productNotice = $ok ? 'Đã thêm sản phẩm mới.' : 'Không thể thêm sản phẩm.';
                       $productNoticeType = $ok ? 'success' : 'error';
                   } else {
-                      $stmt = $pdo->prepare('UPDATE product SET product_name=?, price=?, stock_quantity=?, material=?, color=?, warranty_period=?, category_id=?, url=? WHERE product_id=?');
-                      $ok = $stmt->execute([$prodName, $prodPrice, $prodStock, $prodMaterial, $prodColor, $prodWarranty, $prodCategoryId, $imagePath, $productId]);
+                      $stmt = $pdo->prepare('UPDATE product SET product_name=?, price=?, stock_quantity=?, material=?, color=?, warranty_period=?, category_id=?, url=?, url2=?, url3=? WHERE product_id=?');
+                      $ok = $stmt->execute([$prodName, $prodPrice, $prodStock, $prodMaterial, $prodColor, $prodWarranty, $prodCategoryId, $imagePaths[1], $imagePaths[2], $imagePaths[3], $productId]);
                       $productNotice = $ok ? 'Đã cập nhật sản phẩm.' : 'Không thể cập nhật sản phẩm.';
                       $productNoticeType = $ok ? 'success' : 'error';
                   }
@@ -1506,7 +1504,7 @@
                 <div class="form-grid" style="grid-template-columns:1fr 1fr;">
                   <div class="form-group">
                     <label>Giá (₫)</label>
-                    <input type="number" name="price" min="1" step="1000" required
+                    <input type="number" name="price" min="0" step="1" required
                       value="<?= h($editProduct ? $editProduct['price'] : '') ?>">
                   </div>
                   <div class="form-group">
@@ -1542,10 +1540,22 @@
                   </select>
                 </div>
 
-                <div class="form-group">
-                  <label>Ảnh sản phẩm</label>
-                  <input type="file" name="product_image" accept="image/*" style="padding:6px;">
-                  <small style="color:#888; font-size:12px;">JPG, PNG, WEBP, GIF. Tối đa 3MB.</small>
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                  <div class="form-group">
+                    <label>Ảnh chính (URL 1)</label>
+                    <input type="file" name="product_image" accept="image/*">
+                    <input type="hidden" name="old_url" value="<?= h($editProduct['url'] ?? '') ?>">
+                  </div>
+                  <div class="form-group">
+                    <label>Ảnh phụ 1 (URL 2)</label>
+                    <input type="file" name="product_image2" accept="image/*">
+                    <input type="hidden" name="old_url2" value="<?= h($editProduct['url2'] ?? '') ?>">
+                  </div>
+                  <div class="form-group">
+                    <label>Ảnh phụ 2 (URL 3)</label>
+                    <input type="file" name="product_image3" accept="image/*">
+                    <input type="hidden" name="old_url3" value="<?= h($editProduct['url3'] ?? '') ?>">
+                  </div>
                 </div>
 
                 <?php if ($editProduct && !empty($editProduct['url'])): ?>

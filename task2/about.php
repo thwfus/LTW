@@ -2,21 +2,6 @@
 include '../php/header.php';
 require_once '../task3/db.php';
 
-// Tự tạo bảng nếu chưa có
-mysqli_query($conn, "CREATE TABLE IF NOT EXISTS about_images (
-    image_id    INT AUTO_INCREMENT PRIMARY KEY,
-    filename    VARCHAR(255) NOT NULL,
-    path        VARCHAR(500) NOT NULL,
-    alt_text    VARCHAR(255) NOT NULL DEFAULT '',
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-mysqli_query($conn, "CREATE TABLE IF NOT EXISTS about_content (
-    id         INT AUTO_INCREMENT PRIMARY KEY,
-    content    LONGTEXT NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
 $cntRow = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM about_content"));
 if ((int)($cntRow[0] ?? 0) === 0) {
     mysqli_query($conn, "INSERT INTO about_content (content) VALUES ('')");
